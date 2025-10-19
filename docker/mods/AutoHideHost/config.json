@@ -1,0 +1,12 @@
+{
+  "Enabled": true,
+  "AutoHideOnLoad": false,
+  "AutoHideDaily": false,
+  "PauseWhenEmpty": false,
+  "InstantSleepWhenReady": true,
+  "HideMethod": "warp",
+  "WarpLocation": "Desert",
+  "WarpX": 0,
+  "WarpY": 0,
+  "DebugMode": true
+}

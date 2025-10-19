@@ -1,0 +1,10 @@
+{
+  "Name": "Always On Server",
+  "Author": "funny-snek & Zuberii",
+  "Version": "1.20.3-unofficial.5-mikkoperkele",
+  "Description": "A Headless server mod.",
+  "UniqueID": "mikko.Always_On_Server",
+  "EntryDll": "Always On Server.dll",
+  "MinimumApiVersion": "4.0.0",
+  "UpdateKeys": [ "Nexus:2677" ]
+}

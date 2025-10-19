@@ -1,0 +1,10 @@
+{
+  "Name": "Server Auto Load",
+  "Author": "Puppy-Stardew",
+  "Version": "1.0.0",
+  "Description": "Save management helper for dedicated servers. Provides save detection, monitoring, and helpful loading instructions.",
+  "UniqueID": "puppystardew.ServerAutoLoad",
+  "EntryDll": "ServerAutoLoad.dll",
+  "MinimumApiVersion": "4.0.0",
+  "UpdateKeys": []
+}

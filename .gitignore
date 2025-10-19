@@ -1,0 +1,52 @@
+# Environment variables with sensitive data
+.env
+
+# Data directories
+data/
+
+# Docker volumes
+*.tar.gz
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+.*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Backup files
+backups/
+backup-*/
+
+# Private documentation and development materials
+docs/
+DEVELOPMENT-ROADMAP.md
+CLAUDE.md
+PROMOTIONAL-MATERIALS-COMPLETE.md
+PROMOTIONAL-TEMPLATES.md
+QUICK-START-SUMMARY.md
+SCREENSHOT-GUIDE.md
+SCREENSHOT-TODO.md
+SCREENSHOTS-SUMMARY.md
+TERMINAL-RECORDING-COMPLETION.md
+VIDEO-RECORDING-GUIDE.md
+RELEASE-CHECKLIST.md
+PROMOTION-CONTENT.md
+FINAL-SUMMARY.md
+NEXT-STEPS.md
+RELEASE-v*.md
+RELEASE-NOTES-*.md
+DOCKER-HUB-OVERVIEW.md
+
+# Screenshots (except the demo GIF used in README)
+screenshots/
+!screenshots/game/
+!screenshots/game/instant-sleep-demo.gif
