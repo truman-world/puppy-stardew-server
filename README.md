@@ -521,21 +521,27 @@ If this project helps you, consider giving it a star! ⭐
 <details open>
 <summary><h4>⭐ 方式 1：一键部署（推荐小白使用）</h4></summary>
 
-**直接复制粘贴这条命令到终端：**
+**英文版 (English Version):**
 
 ```bash
 curl -sSL https://raw.githubusercontent.com/truman-world/puppy-stardew-server/main/quick-start.sh | bash
 ```
 
+**中文版:**
+
+```bash
+curl -sSL https://raw.githubusercontent.com/truman-world/puppy-stardew-server/main/quick-start-zh.sh | bash
+```
+
 脚本会自动：
-- ✅ 检查您的 Docker 安装
-- ✅ 引导您输入 Steam 账号密码
-- ✅ 创建所有必要的目录并设置正确权限
+- ✅ 检查 Docker 安装
+- ✅ 引导输入 Steam 凭证
+- ✅ 创建必要目录并设置正确权限
 - ✅ 生成配置文件
 - ✅ 启动服务器
 - ✅ 显示连接信息
 
-**就这样！** ☕ 喝杯咖啡等它下载游戏（约 1.5GB）。
+**就这么简单！** ☕ 下载游戏文件时去喝杯咖啡（约 1.5GB）。
 
 </details>
 

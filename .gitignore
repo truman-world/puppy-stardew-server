@@ -6,6 +6,7 @@ data/
 
 # Docker volumes
 *.tar.gz
+*.zip
 
 # IDE files
 .vscode/
@@ -45,6 +46,12 @@ NEXT-STEPS.md
 RELEASE-v*.md
 RELEASE-NOTES-*.md
 DOCKER-HUB-OVERVIEW.md
+
+# Nexus Mods submission materials (private)
+NEXUS-*.md
+BBCODE-*.md
+SCRIPT-FIX-*.md
+AutoHideHost-v*.zip
 
 # Screenshots (except the demo GIF used in README)
 screenshots/
