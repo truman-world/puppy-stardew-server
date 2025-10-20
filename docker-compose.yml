@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   stardew-server:
     image: truemanlive/puppy-stardew-server:latest

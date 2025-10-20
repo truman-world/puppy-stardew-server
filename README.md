@@ -59,10 +59,16 @@ Setting up a **Stardew Valley dedicated server** has never been easier! With **o
 <details open>
 <summary><h4>⭐ Option 1: One-Command Deployment (Recommended for Beginners)</h4></summary>
 
-**Literally just copy-paste this into your terminal:**
+**English Version:**
 
 ```bash
 curl -sSL https://raw.githubusercontent.com/truman-world/puppy-stardew-server/main/quick-start.sh | bash
+```
+
+**中文版 (Chinese Version):**
+
+```bash
+curl -sSL https://raw.githubusercontent.com/truman-world/puppy-stardew-server/main/quick-start-zh.sh | bash
 ```
 
 The script will:
