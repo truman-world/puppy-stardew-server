@@ -1,4 +1,4 @@
-# Puppy Stardew Server | 星露谷物语服务器一键搭建开服联机
+# Puppy Stardew Server | 星露谷物语一键搭建开服联机
 
 <div align="center">
 
