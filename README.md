@@ -947,6 +947,4 @@ docker compose up -d
 
 **为星露谷物语社区用爱制作**
 
-[⬆ Back to Top](#-puppy-stardew-server--小狗星谷服务器)
-
 </div>
