@@ -2,7 +2,7 @@ services:
   stardew-server:
     image: truemanlive/puppy-stardew-server:latest
     container_name: puppy-stardew
-    restart: unless-stopped
+    restart: on-failure:5  # Limit to 5 restarts to prevent infinite loops
 
     # Required for Steam Guard code input
     # Steam 令牌输入所需
@@ -45,6 +45,8 @@ services:
       - ./data/saves:/home/steam/.config/StardewValley:rw
       - ./data/game:/home/steam/stardewvalley:rw
       - ./data/steam:/home/steam/Steam:rw
+      # Mount our improved entrypoint script
+      - ./entrypoint-robust.sh:/home/steam/entrypoint.sh:ro
 
     # Resource limits
     # 资源限制
@@ -76,7 +78,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 120s
+      start_period: 180s  # Give 3 minutes for startup
 
     # Logging configuration (prevents log files from growing too large)
     # 日志配置（防止日志文件过大）

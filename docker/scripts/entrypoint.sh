@@ -1,6 +1,6 @@
 #!/bin/bash
-# Puppy Stardew Server Entrypoint Script
-# 小狗星谷服务器启动脚本
+# Puppy Stardew Server Entrypoint Script - Robust Version
+# 小狗星谷服务器启动脚本 - 稳健版本
 
 set -e
 
@@ -11,6 +11,12 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
+
+# Global variables
+STEAM_AUTH_SUCCESS=false
+GAME_DOWNLOADED=false
+MAX_RETRIES=3
+RETRY_COUNT=0
 
 log_info() {
     echo -e "${GREEN}[Puppy-Stardew]${NC} $1"
@@ -28,6 +34,40 @@ log_step() {
     echo -e "${BLUE}[Puppy-Stardew]${NC} $1"
 }
 
+# Check if this is a retry
+if [ "$1" = "--retry" ]; then
+    RETRY_COUNT=$((RETRY_COUNT + 1))
+    log_info "Retry attempt $RETRY_COUNT of $MAX_RETRIES"
+    log_info "重试次数 $RETRY_COUNT / $MAX_RETRIES"
+
+    if [ $RETRY_COUNT -gt $MAX_RETRIES ]; then
+        log_error "Maximum retry attempts reached!"
+        log_error "达到最大重试次数！"
+        log_error ""
+        log_error "Please check your Steam credentials and try again:"
+        log_error "请检查您的Steam凭证并重试："
+        log_error "1. Stop container: docker compose stop"
+        log_error "2. Update credentials in .env file"
+        log_error "3. Restart: docker compose up -d"
+        exit 1
+    fi
+fi
+
+# Create a state file to track progress
+STATE_FILE="/tmp/stardew-state.txt"
+
+# Save state
+save_state() {
+    echo "$1" > "$STATE_FILE"
+}
+
+# Load state
+load_state() {
+    if [ -f "$STATE_FILE" ]; then
+        cat "$STATE_FILE"
+    fi
+}
+
 # ============================================
 # Step 1: Validate Steam Credentials
 # 步骤 1: 验证 Steam 凭证
@@ -38,6 +78,8 @@ log_step "Step 1: Checking Steam credentials..."
 if [ -f "/home/steam/stardewvalley/Stardew Valley.dll" ]; then
     log_info "Game files already exist. Skipping Steam credential validation."
     log_info "游戏文件已存在。跳过 Steam 凭证验证。"
+    GAME_DOWNLOADED=true
+    save_state "game_downloaded"
 elif [ -z "$STEAM_USERNAME" ] || [ -z "$STEAM_PASSWORD" ]; then
     log_error "============================================"
     log_error "ERROR: Steam credentials not provided!"
@@ -49,54 +91,177 @@ elif [ -z "$STEAM_USERNAME" ] || [ -z "$STEAM_PASSWORD" ]; then
     log_error "  STEAM_USERNAME=your_steam_username"
     log_error "  STEAM_PASSWORD=your_steam_password"
     log_error ""
-    log_error "Example / 示例:"
-    log_error "  docker run -e STEAM_USERNAME=myaccount \\"
-    log_error "             -e STEAM_PASSWORD=mypassword \\"
-    log_error "             truemanlive/puppy-stardew-server"
-    log_error ""
-    log_error "For Steam Guard codes, use docker attach:"
-    log_error "对于 Steam 令牌验证，使用 docker attach："
-    log_error "  docker attach <container_name>"
+    log_error "For Steam Guard codes:"
+    log_error "对于 Steam 令牌验证："
+    log_error "  docker attach puppy-stardew"
     log_error "============================================"
     exit 1
 else
     log_info "Steam username: $STEAM_USERNAME"
+
+    # Check if we previously failed authentication
+    if [ "$(load_state)" = "auth_failed" ]; then
+        log_warn "Previous authentication attempt failed."
+        log_warn "之前的认证尝试失败。"
+
+        # If we've exceeded retries, wait for manual intervention
+        if [ $RETRY_COUNT -ge 1 ]; then
+            log_error "Authentication failed multiple times."
+            log_error "认证多次失败。"
+            log_error ""
+            log_error "Please check:"
+            log_error "请检查："
+            log_error "1. Steam username and password are correct"
+            log_error "   Steam用户名和密码是否正确"
+            log_error "2. Steam Guard is not blocking authentication"
+            log_error "   Steam Guard没有阻止认证"
+            log_error "3. Your account owns Stardew Valley"
+            log_error "   您的账户拥有星露谷物语"
+            exit 1
+        fi
+    fi
 fi
 
 # ============================================
 # Step 2: Download Stardew Valley via Steam
 # 步骤 2: 通过 Steam 下载星露谷物语
 # ============================================
-log_step "Step 2: Checking game files..."
-
-if [ ! -f "/home/steam/stardewvalley/Stardew Valley.dll" ]; then
+if [ "$GAME_DOWNLOADED" = false ]; then
+    log_step "Step 2: Downloading game files..."
     log_warn "Game files not found. Downloading Stardew Valley..."
     log_warn "未找到游戏文件。正在下载星露谷物语..."
     log_warn "This will take 5-10 minutes depending on your connection."
     log_warn "根据网络情况，此过程需要 5-10 分钟。"
     log_warn ""
-    log_warn "If Steam Guard is enabled, you will be prompted for the code."
-    log_warn "如果启用了 Steam 令牌，系统会提示输入验证码。"
-    log_warn "Check your Steam Guard email/mobile app!"
-    log_warn "请查看您的 Steam 令牌邮件/手机应用！"
-    log_warn ""
 
-    # Use SteamCMD to download the game
-    # AppID 413150 = Stardew Valley
-    /home/steam/steamcmd/steamcmd.sh \
-        +force_install_dir /home/steam/stardewvalley \
-        +login "$STEAM_USERNAME" "$STEAM_PASSWORD" \
-        +app_update 413150 validate \
-        +quit
+    # Clean up any existing Steam files that might be corrupted
+    log_info "Cleaning up any corrupted Steam files..."
+    rm -rf /home/steam/Steam/config/*
+    rm -rf /home/steam/Steam/logs/*
+    rm -rf /tmp/steam*
 
-    if [ $? -ne 0 ]; then
-        log_error "Failed to download game! Check your Steam credentials."
-        log_error "下载游戏失败！请检查 Steam 凭证。"
-        exit 1
+    # Ensure proper permissions
+    chown -R steam:steam /home/steam/Steam 2>/dev/null || true
+
+    # Create Steam download script with better error handling
+    cat > /tmp/download_game.sh << 'EOF'
+#!/bin/bash
+set -e
+
+# Check for Steam Guard
+GUARD_NEEDED=false
+
+# Function to handle Steam Guard
+handle_steam_guard() {
+    if [ "$GUARD_NEEDED" = "true" ]; then
+        echo ""
+        echo "============================================="
+        echo "STEAM GUARD REQUIRED"
+        echo "需要 STEAM 令牌验证"
+        echo "============================================="
+        echo ""
+        echo "Container is stopping for manual input:"
+        echo "容器停止，等待手动输入："
+        echo ""
+        echo "1. Run: docker attach puppy-stardew"
+        echo "2. Enter Steam Guard code when prompted"
+        echo "3. Press Ctrl+P, then Ctrl+Q to detach"
+        echo ""
+        echo "After entering the code, the container will restart automatically."
+        echo "输入验证码后，容器会自动重启。"
+        echo ""
+
+        # Signal that we need Steam Guard
+        touch /tmp/steam_guard_needed
+
+        # Stop container to allow attachment
+        exit 2
     fi
+}
 
-    log_info "Game downloaded successfully!"
-    log_info "游戏下载完成！"
+# Run SteamCMD with timeout and error handling
+timeout 600s /home/steam/steamcmd/steamcmd.sh \
+    +force_install_dir /home/steam/stardewvalley \
+    +login "$STEAM_USERNAME" "$STEAM_PASSWORD" \
+    +app_update 413150 validate \
+    +quit 2>&1 | tee /tmp/steam_output.log
+
+# Check output for Steam Guard requirement
+if grep -q "Two-factor code" /tmp/steam_output.log; then
+    GUARD_NEEDED=true
+    handle_steam_guard
+fi
+
+# Check for authentication errors
+if grep -q "Login Failed" /tmp/steam_output.log || grep -q "Invalid Password" /tmp/steam_output.log; then
+    echo "Authentication failed!"
+    exit 1
+fi
+
+# Check for disk write failure
+if grep -q "Disk write failure" /tmp/steam_output.log; then
+    echo "Disk write failure detected!"
+    echo "Please check disk space and permissions."
+    exit 3
+fi
+
+# Check for successful download
+if grep -q "Success! App '413150' fully installed" /tmp/steam_output.log; then
+    echo "Game downloaded successfully!"
+    exit 0
+else
+    echo "Download failed for unknown reason"
+    exit 4
+fi
+EOF
+
+    chmod +x /tmp/download_game.sh
+
+    # Execute download script
+    if /tmp/download_game.sh; then
+        save_state "game_downloaded"
+        log_info "Game downloaded successfully!"
+        log_info "游戏下载完成！"
+        GAME_DOWNLOADED=true
+    else
+        exit_code=$?
+
+        case $exit_code in
+            1)
+                log_error "Steam authentication failed!"
+                log_error "Steam认证失败！"
+                save_state "auth_failed"
+                log_error "Container will restart for retry..."
+                log_error "容器将重启重试..."
+                # Trigger restart with retry flag
+                exec /home/steam/entrypoint.sh --retry
+                ;;
+            2)
+                # Steam Guard needed - container stopped
+                log_error "Steam Guard authentication required!"
+                log_error "需要Steam令牌验证！"
+                log_error "Use 'docker attach puppy-stardew' to enter code"
+                exit 2
+                ;;
+            3)
+                log_error "Disk write failure!"
+                log_error "磁盘写入失败！"
+                log_error ""
+                log_error "To fix:"
+                log_error "修复方法："
+                log_error "1. Stop container: docker compose stop"
+                log_error "2. Check disk space: df -h"
+                log_error "3. Fix permissions: chown -R 1000:1000 data/"
+                log_error "4. Restart: docker compose up -d"
+                exit 3
+                ;;
+            *)
+                log_error "Download failed with exit code: $exit_code"
+                log_error "下载失败，退出码：$exit_code"
+                exit 4
+                ;;
+        esac
+    fi
 else
     log_info "Game files found. Skipping download."
     log_info "已找到游戏文件。跳过下载。"
