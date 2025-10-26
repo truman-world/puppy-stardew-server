@@ -1,6 +1,6 @@
 services:
   stardew-server:
-    image: truemanlive/puppy-stardew-server:v1.0.3
+    image: truemanlive/puppy-stardew-server:latest
     container_name: puppy-stardew
     restart: on-failure:5  # Limit to 5 restarts to prevent infinite loops
 
