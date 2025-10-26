@@ -1,4 +1,4 @@
-# 🐶 Puppy Stardew Server | 星露谷物语服务器一键搭建开服联机
+# Puppy Stardew Server | 星露谷物语一键搭建开服联机
 
 <div align="center">
 
@@ -19,7 +19,7 @@
 
 ## English
 
-### 🚀 Deploy Your Stardew Valley Server in 3 Minutes
+### Deploy Your Stardew Valley Server in 3 Minutes
 
 Setting up a **Stardew Valley dedicated server** has never been easier! With **one simple command**, you can have your own 24/7 multiplayer server running on **any platform** - PC, Mac, Linux, iOS, and Android players can all join together.
 
@@ -32,7 +32,7 @@ Setting up a **Stardew Valley dedicated server** has never been easier! With **o
 
 ### ✨ Key Features
 
-- **One-Command Deploy** 🚀 - Deploy in 3 minutes with a single command
+- **One-Command Deploy** - Deploy in 3 minutes with a single command
 - **Cross-Platform Support** 📱 - PC, Mac, Linux, iOS, Android all supported
 - **24/7 Dedicated Server** ⚡ - Runs independently without requiring the host to be online
 - **Docker Compose** 🐳 - Easy deployment and management
@@ -50,9 +50,9 @@ Setting up a **Stardew Valley dedicated server** has never been easier! With **o
 
 </div>
 
-### 🚀 Quick Start (2 Options)
+### Quick Start (2 Options)
 
-#### 📺 Watch the One-Command Deployment in Action
+#### Watch the One-Command Deployment in Action
 
 [![asciicast](https://asciinema.org/a/SYBS2qWsb5ZlSolbFPuoA7EJY.svg)](https://asciinema.org/a/SYBS2qWsb5ZlSolbFPuoA7EJY)
 
@@ -481,7 +481,7 @@ If this project helps you, consider giving it a star! ⭐
 
 ## 中文
 
-### 🚀 3分钟搭建星露谷物语服务器
+### 3分钟搭建星露谷物语服务器
 
 搭建**星露谷物语专用服务器**从未如此简单！通过**一条命令**，您就可以拥有自己的 24/7 多人联机服务器，支持**全平台**联机 - PC、Mac、Linux、iOS 和 Android 玩家都可以一起游戏。
 
@@ -494,7 +494,7 @@ If this project helps you, consider giving it a star! ⭐
 
 ### ✨ 核心功能
 
-- **一键部署** 🚀 - 一条命令 3 分钟完成部署
+- **一键部署**  - 一条命令 3 分钟完成部署
 - **全平台支持** 📱 - PC、Mac、Linux、iOS、Android 全支持
 - **24/7 专用服务器** ⚡ - 服务器独立运行，不需要房主在线
 - **Docker Compose** 🐳 - 轻松部署和管理
@@ -512,9 +512,9 @@ If this project helps you, consider giving it a star! ⭐
 
 </div>
 
-### 🚀 快速开始（2 种方式）
+### 快速开始（2 种方式）
 
-#### 📺 观看一键部署演示
+#### 观看一键部署演示
 
 [![asciicast](https://asciinema.org/a/SYBS2qWsb5ZlSolbFPuoA7EJY.svg)](https://asciinema.org/a/SYBS2qWsb5ZlSolbFPuoA7EJY)
 
@@ -946,7 +946,5 @@ docker compose up -d
 **Made with ❤️ for the Stardew Valley community**
 
 **为星露谷物语社区用爱制作**
-
-[⬆ Back to Top](#-puppy-stardew-server--小狗星谷服务器)
 
 </div>
