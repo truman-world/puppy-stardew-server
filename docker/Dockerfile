@@ -14,7 +14,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 LABEL maintainer="truemanlive" \
       description="Stardew Valley dedicated server with instant sleep functionality" \
-      version="1.0.0"
+      version="1.0.1"
 
 # Install dependencies in separate layers to optimize build cache
 # 分层安装依赖以优化构建缓存
