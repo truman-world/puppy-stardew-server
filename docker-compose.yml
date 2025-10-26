@@ -45,8 +45,6 @@ services:
       - ./data/saves:/home/steam/.config/StardewValley:rw
       - ./data/game:/home/steam/stardewvalley:rw
       - ./data/steam:/home/steam/Steam:rw
-      # Mount our improved entrypoint script
-      - ./entrypoint-robust.sh:/home/steam/entrypoint.sh:ro
 
     # Resource limits
     # 资源限制
