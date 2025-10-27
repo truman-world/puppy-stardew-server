@@ -1,0 +1,92 @@
+services:
+  stardew-server:
+    image: truemanlive/puppy-stardew-server:latest
+    container_name: puppy-stardew
+    restart: on-failure:5  # Limit to 5 restarts to prevent infinite loops
+
+    # Required for Steam Guard code input
+    # Steam 令牌输入所需
+    stdin_open: true
+    tty: true
+
+    # Environment variables (configured in .env file)
+    # 环境变量（在 .env 文件中配置）
+    environment:
+      # Steam credentials - REQUIRED
+      # Steam 凭证 - 必需
+      - STEAM_USERNAME=${STEAM_USERNAME}
+      - STEAM_PASSWORD=${STEAM_PASSWORD}
+
+      # VNC settings - OPTIONAL (for first-time setup)
+      # VNC 设置 - 可选（用于首次设置）
+      - ENABLE_VNC=${ENABLE_VNC:-true}
+      - VNC_PASSWORD=${VNC_PASSWORD:-stardew123}
+
+    # Port mappings
+    # 端口映射
+    ports:
+      # Game server port (REQUIRED)
+      # 游戏服务器端口（必需）
+      - "24642:24642/udp"
+
+      # VNC port (OPTIONAL - only needed for initial setup)
+      # VNC 端口（可选 - 仅首次设置需要）
+      - "5900:5900/tcp"
+
+    # Persistent data volumes (bind mounts)
+    # 持久化数据卷（绑定挂载）
+    #
+    # IMPORTANT: Data directories must be owned by UID 1000
+    # 重要：数据目录必须归 UID 1000 所有
+    #
+    # Run this before starting: mkdir -p data/{saves,game,steam} && chown -R 1000:1000 data/
+    # 启动前运行：mkdir -p data/{saves,game,steam} && chown -R 1000:1000 data/
+    volumes:
+      - ./data/saves:/home/steam/.config/StardewValley:rw
+      - ./data/game:/home/steam/stardewvalley:rw
+      - ./data/steam:/home/steam/Steam:rw
+      # Mount our improved entrypoint script
+      - ./entrypoint-robust.sh:/home/steam/entrypoint.sh:ro
+
+    # Resource limits
+    # 资源限制
+    #
+    # Adjust based on your server specs:
+    # 根据服务器规格调整：
+    # - 2GB RAM server: Set memory to 1.5G
+    # - 4GB RAM server: Keep at 2G
+    # - 8GB+ RAM server: Can increase to 4G for 8+ players
+    #
+    # - 2GB 内存服务器：设置内存为 1.5G
+    # - 4GB 内存服务器：保持 2G
+    # - 8GB+ 内存服务器：8+ 玩家时可增加到 4G
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          memory: 1G
+
+    # Health check
+    # 健康检查
+    #
+    # Checks if SMAPI is running every 30 seconds
+    # 每 30 秒检查 SMAPI 是否运行
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "StardewModdingAPI"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 180s  # Give 3 minutes for startup
+
+    # Logging configuration (prevents log files from growing too large)
+    # 日志配置（防止日志文件过大）
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+# No named volumes - using bind mounts for easier backup and management
+# 不使用命名卷 - 使用绑定挂载以便于备份和管理

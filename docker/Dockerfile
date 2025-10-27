@@ -14,21 +14,19 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 LABEL maintainer="truemanlive" \
       description="Stardew Valley dedicated server with instant sleep functionality" \
-      version="1.0.1"
+      version="1.0.6"
 
-# Install dependencies in separate layers to optimize build cache
-# 分层安装依赖以优化构建缓存
-RUN apt-get update && apt-get install -y --no-install-recommends \
+# Enable 32-bit architecture for SteamCMD
+# 启用32位架构支持以安装SteamCMD
+RUN dpkg --add-architecture i386 && \
+    apt-get update && apt-get install -y --no-install-recommends \
     wget \
     curl \
     unzip \
     ca-certificates \
     lib32gcc-s1 \
     libsdl2-2.0-0 \
-    libcurl4 \
-    libcurl4-openssl-dev \
     libcurl3-gnutls:i386 \
-    libcurl4:i386 \
     && rm -rf /var/lib/apt/lists/*
 
 # Install virtual display and VNC dependencies
