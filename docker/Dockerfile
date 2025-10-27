@@ -25,6 +25,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     lib32gcc-s1 \
     libsdl2-2.0-0 \
+    libcurl4 \
+    libcurl4-openssl-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Install virtual display and VNC dependencies
