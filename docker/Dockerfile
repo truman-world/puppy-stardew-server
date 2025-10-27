@@ -33,6 +33,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     xvfb \
     x11vnc \
     openbox \
+    expect \
     && rm -rf /var/lib/apt/lists/*
 
 # Install .NET runtime (required for game mods)
