@@ -39,6 +39,39 @@ log_steam() {
     echo -e "${CYAN}[Steam-Guard]${NC} $1"
 }
 
+# ============================================
+# Auto-fix permissions for mounted volumes
+# 自动修复挂载卷的权限
+# ============================================
+log_info "Checking and fixing volume permissions..."
+
+# Check if we need to fix permissions (running as root initially to fix permissions)
+if [ "$(id -u)" -eq 0 ]; then
+    log_info "Running as root, fixing permissions for mounted volumes..."
+
+    # Fix permissions for Steam directory
+    if [ -d "/home/steam/Steam" ]; then
+        chown -R steam:steam /home/steam/Steam 2>/dev/null || true
+    fi
+
+    # Fix permissions for game directory
+    if [ -d "/home/steam/stardewvalley" ]; then
+        chown -R steam:steam /home/steam/stardewvalley 2>/dev/null || true
+    fi
+
+    # Fix permissions for config directory
+    if [ -d "/home/steam/.config" ]; then
+        chown -R steam:steam /home/steam/.config 2>/dev/null || true
+    fi
+
+    log_info "✓ Permissions fixed. Switching to steam user..."
+    # Switch to steam user and re-execute this script
+    exec su - steam -c "cd /home/steam && /home/steam/entrypoint.sh"
+fi
+
+# Now running as steam user
+log_info "✓ Running as steam user (UID $(id -u))"
+
 # Fix libcurl compatibility for SteamCMD
 log_step "Step 1: Setting up environment..."
 log_info "Fixing libcurl compatibility for SteamCMD..."

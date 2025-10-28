@@ -14,7 +14,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 LABEL maintainer="truemanlive" \
       description="Stardew Valley dedicated server with instant sleep functionality" \
-      version="1.0.20"
+      version="1.0.21"
 
 # Enable 32-bit architecture for SteamCMD
 # 启用32位架构支持以安装SteamCMD
@@ -76,9 +76,12 @@ USER steam
 # Copy entrypoint script
 # 复制启动脚本
 USER root
-COPY --chown=steam:steam scripts/entrypoint.sh /home/steam/entrypoint.sh
+COPY --chown=root:root scripts/entrypoint.sh /home/steam/entrypoint.sh
 RUN chmod +x /home/steam/entrypoint.sh
-USER steam
+
+# Start as root to fix permissions, entrypoint will switch to steam user
+# 以 root 启动以修复权限，entrypoint 会切换到 steam 用户
+# USER steam <- Removed, now starting as root
 
 # Expose game port (UDP) and VNC port (TCP)
 # 暴露游戏端口（UDP）和 VNC 端口（TCP）
