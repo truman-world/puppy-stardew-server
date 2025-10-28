@@ -1,6 +1,6 @@
 services:
   stardew-server:
-    image: truemanlive/puppy-stardew-server:v1.0.18
+    image: truemanlive/puppy-stardew-server:v1.0.19
     container_name: puppy-stardew
     restart: unless-stopped  # Keep running after Steam Guard
     # Interactive mode for Steam Guard
