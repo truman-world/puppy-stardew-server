@@ -65,8 +65,8 @@ if [ "$(id -u)" -eq 0 ]; then
     fi
 
     log_info "✓ Permissions fixed. Switching to steam user..."
-    # Switch to steam user and re-execute this script
-    exec su - steam -c "cd /home/steam && /home/steam/entrypoint.sh"
+    # Switch to steam user and re-execute this script, preserving environment variables
+    exec su steam -c "export STEAM_USERNAME='$STEAM_USERNAME' STEAM_PASSWORD='$STEAM_PASSWORD' ENABLE_VNC='$ENABLE_VNC' VNC_PASSWORD='$VNC_PASSWORD' && cd /home/steam && /home/steam/entrypoint.sh"
 fi
 
 # Now running as steam user
