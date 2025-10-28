@@ -39,44 +39,6 @@ log_steam() {
     echo -e "${CYAN}[Steam-Guard]${NC} $1"
 }
 
-# ============================================
-# Auto-fix permissions for mounted volumes
-# 自动修复挂载卷的权限
-# ============================================
-log_info "Checking and fixing volume permissions..."
-
-# Check if we need to fix permissions (running as root initially to fix permissions)
-if [ "$(id -u)" -eq 0 ]; then
-    log_info "Running as root, fixing permissions for mounted volumes..."
-
-    # Fix permissions for Steam directory
-    if [ -d "/home/steam/Steam" ]; then
-        chown -R steam:steam /home/steam/Steam 2>/dev/null || true
-    fi
-
-    # Fix permissions for game directory
-    if [ -d "/home/steam/stardewvalley" ]; then
-        chown -R steam:steam /home/steam/stardewvalley 2>/dev/null || true
-    fi
-
-    # Fix permissions for config directory
-    if [ -d "/home/steam/.config" ]; then
-        chown -R steam:steam /home/steam/.config 2>/dev/null || true
-    fi
-
-    log_info "✓ Permissions fixed. Switching to steam user..."
-    # Switch to steam user using gosu (preserves stdin/stdout/stderr and env vars)
-    exec gosu steam env \
-        STEAM_USERNAME="$STEAM_USERNAME" \
-        STEAM_PASSWORD="$STEAM_PASSWORD" \
-        ENABLE_VNC="$ENABLE_VNC" \
-        VNC_PASSWORD="$VNC_PASSWORD" \
-        /home/steam/entrypoint.sh
-fi
-
-# Now running as steam user
-log_info "✓ Running as steam user (UID $(id -u))"
-
 # Fix libcurl compatibility for SteamCMD
 log_step "Step 1: Setting up environment..."
 log_info "Fixing libcurl compatibility for SteamCMD..."
@@ -348,10 +310,7 @@ if [ "$GAME_DOWNLOADED" = false ]; then
         exit 1
     fi
 fi
-
-# Install SMAPI if needed
-log_step "Step 3: Checking SMAPI installation..."
-
+fi
 if [ ! -f "/home/steam/stardewvalley/StardewModdingAPI" ]; then
     log_info "Installing SMAPI..."
     log_info "正在安装 SMAPI..."
@@ -455,4 +414,3 @@ log_warn ""
 cd /home/steam/stardewvalley
 exec ./StardewModdingAPI --server
 
-fi
