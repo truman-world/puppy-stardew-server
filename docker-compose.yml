@@ -1,11 +1,10 @@
 services:
   stardew-server:
-    image: truemanlive/puppy-stardew-server:latest
+    image: truemanlive/puppy-stardew-server:v1.0.18
     container_name: puppy-stardew
-    restart: on-failure:5  # Limit to 5 restarts to prevent infinite loops
-
-    # Required for Steam Guard code input
-    # Steam 令牌输入所需
+    restart: unless-stopped  # Keep running after Steam Guard
+    # Interactive mode for Steam Guard
+    # Steam Guard 交互模式
     stdin_open: true
     tty: true
 

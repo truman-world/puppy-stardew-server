@@ -14,7 +14,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 LABEL maintainer="truemanlive" \
       description="Stardew Valley dedicated server with instant sleep functionality" \
-      version="1.0.6"
+      version="1.0.19"
 
 # Enable 32-bit architecture for SteamCMD
 # 启用32位架构支持以安装SteamCMD
@@ -68,7 +68,7 @@ RUN wget -qO smapi.zip 'https://github.com/Pathoschild/SMAPI/releases/download/4
 # Copy pre-configured mods to a temporary location
 # 将预配置的模组复制到临时位置
 USER root
-COPY docker/mods/ /home/steam/preinstalled-mods/
+COPY mods/ /home/steam/preinstalled-mods/
 RUN chown -R steam:steam /home/steam/preinstalled-mods && \
     chmod -R 755 /home/steam/preinstalled-mods
 USER steam
@@ -76,7 +76,7 @@ USER steam
 # Copy entrypoint script
 # 复制启动脚本
 USER root
-COPY --chown=steam:steam docker/scripts/entrypoint.sh /home/steam/entrypoint.sh
+COPY --chown=steam:steam scripts/entrypoint.sh /home/steam/entrypoint.sh
 RUN chmod +x /home/steam/entrypoint.sh
 USER steam
 

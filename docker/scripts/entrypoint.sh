@@ -40,7 +40,7 @@ log_steam() {
 }
 
 # Fix libcurl compatibility for SteamCMD
-log_step "Step 1: Checking Steam credentials..."
+log_step "Step 1: Setting up environment..."
 log_info "Fixing libcurl compatibility for SteamCMD..."
 if [ -f "/usr/lib/x86_64-linux-gnu/libcurl.so.4" ]; then
     # Remove conflicting 64-bit libcurl that causes issues
@@ -50,6 +50,20 @@ if [ -f "/usr/lib/x86_64-linux-gnu/libcurl.so.4" ]; then
         ln -sf /usr/lib/i386-linux-gnu/libcurl.so.4 /usr/lib/x86_64-linux-gnu/libcurl.so.4
     fi
 fi
+
+# CRITICAL: Fix Steam directory permissions BEFORE any Steam operations
+log_info "Setting up critical Steam directory permissions..."
+chown -R steam:steam /home/steam/Steam 2>/dev/null || true
+chown -R steam:steam /home/steam/stardewvalley 2>/dev/null || true
+chown -R steam:steam /home/steam/.config 2>/dev/null || true
+
+# Ensure critical directories exist with correct permissions
+mkdir -p /home/steam/Steam/config
+mkdir -p /home/steam/Steam/logs
+mkdir -p /home/steam/stardewvalley
+chown steam:steam /home/steam/Steam/config /home/steam/Steam/logs /home/steam/stardewvalley 2>/dev/null || true
+
+log_step "Step 2: Checking Steam credentials..."
 
 # Check if game is already downloaded
 if [ -f "/home/steam/stardewvalley/Stardew Valley.dll" ]; then
@@ -92,14 +106,131 @@ if [ "$GAME_DOWNLOADED" = false ]; then
     rm -rf /tmp/steam*
     rm -f /tmp/steam_*.log
 
-    # Ensure proper permissions
+    # Ensure proper permissions before download
+    log_info "Setting up proper permissions for Steam data..."
     chown -R steam:steam /home/steam/Steam 2>/dev/null || true
+    chown -R steam:steam /home/steam/stardewvalley 2>/dev/null || true
 
-    # Try to download game with Steam Guard handling
-    log_info "Starting Steam authentication and download..."
+    # First, try to detect if Steam Guard is needed
+    log_info "Checking if Steam Guard authentication is required..."
 
-    # Run SteamCMD - this will handle Steam Guard automatically
-    /home/steam/steamcmd/steamcmd.sh \
+    # Run a quick test to check for Steam Guard requirement
+    timeout 30 /home/steam/steamcmd/steamcmd.sh \
+        +login "$STEAM_USERNAME" "$STEAM_PASSWORD" \
+        +quit 2>&1 | tee /tmp/steam_guard_test.log
+
+    # Check the timeout status
+    TIMEOUT_STATUS=$?
+
+    # Check for rate limit FIRST (this takes priority)
+    if grep -q "Rate Limit Exceeded" /tmp/steam_guard_test.log || \
+       grep -q "ERROR (Rate Limit Exceeded)" /tmp/steam_guard_test.log; then
+
+        log_error "Steam API rate limit detected. Please wait before retrying."
+        log_error "检测到 Steam API 速率限制。请等待后重试。"
+        log_error "建议等待 30 分钟后再试。"
+        exit 1
+
+    # Check if timeout occurred - this might indicate Steam Guard is required
+    elif [ $TIMEOUT_STATUS -eq 124 ] || [ $TIMEOUT_STATUS -eq 137 ]; then
+
+        # Timeout occurred - likely Steam Guard is required but test couldn't complete
+        log_warn "Steam Guard test timed out - authentication likely required!"
+        log_warn "Steam Guard 测试超时 - 可能需要验证码！"
+
+        log_steam ""
+        log_steam "========================================"
+        log_steam "STEAM GUARD CODE REQUIRED"
+        log_steam "需要输入 STEAM 令牌验证码"
+        log_steam "========================================"
+        log_steam ""
+        log_steam "Container will now restart in interactive mode for Steam Guard"
+        log_steam "容器将以交互模式重启以进行 Steam Guard 验证"
+        log_steam ""
+        log_steam "To input code:"
+        log_steam "输入验证码步骤："
+        log_steam "1. Wait for container restart (30 seconds)"
+        log_steam "1. 等待容器重启（30秒）"
+        log_steam "2. Run: docker attach puppy-stardew"
+        log_steam "2. 运行：docker attach puppy-stardew"
+        log_steam "3. Enter Steam Guard code when prompted"
+        log_steam "3. 提示时输入 Steam Guard 验证码"
+        log_steam "4. Press ENTER after code"
+        log_steam "4. 输入验证码后按回车"
+        log_steam "========================================"
+
+        # Run SteamCMD in interactive mode for Steam Guard
+        log_info "Starting Steam authentication with Steam Guard..."
+        /home/steam/steamcmd/steamcmd.sh \
+            +force_install_dir /home/steam/stardewvalley \
+            +login "$STEAM_USERNAME" "$STEAM_PASSWORD" \
+            +app_update 413150 validate \
+            +quit
+
+        # Check if download was successful
+        if [ ! -f "/home/steam/stardewvalley/StardewValley" ]; then
+            log_error "Game download failed after Steam Guard verification"
+            log_error "Steam Guard 验证后游戏下载失败"
+            exit 1
+        fi
+
+        log_info "Game downloaded successfully after Steam Guard verification!"
+        log_info "Steam Guard 验证后游戏下载完成！"
+        GAME_DOWNLOADED=true
+
+    # Then check for Steam Guard from log analysis
+    elif grep -q "Two-factor code" /tmp/steam_guard_test.log || \
+         grep -q "Guard code" /tmp/steam_guard_test.log || \
+         grep -q "This computer has not been authenticated" /tmp/steam_guard_test.log; then
+
+        # Steam Guard is required - provide interactive instructions
+        log_warn "Steam Guard authentication required!"
+        log_warn "需要 Steam 令牌验证！"
+
+        log_steam ""
+        log_steam "========================================"
+        log_steam "STEAM GUARD CODE REQUIRED"
+        log_steam "需要输入 STEAM 令牌验证码"
+        log_steam "========================================"
+        log_steam ""
+        log_steam "Container will now restart in interactive mode for Steam Guard"
+        log_steam "容器将以交互模式重启以进行 Steam Guard 验证"
+        log_steam ""
+        log_steam "To input code:"
+        log_steam "输入验证码步骤："
+        log_steam "1. Wait for container restart (30 seconds)"
+        log_steam "1. 等待容器重启（30秒）"
+        log_steam "2. Run: docker attach puppy-stardew"
+        log_steam "2. 运行：docker attach puppy-stardew"
+        log_steam "3. Enter Steam Guard code when prompted"
+        log_steam "3. 提示时输入 Steam Guard 验证码"
+        log_steam "4. Press ENTER after code"
+        log_steam "4. 输入验证码后按回车"
+        log_steam "========================================"
+
+        # Run SteamCMD in interactive mode for Steam Guard
+        log_info "Starting Steam authentication with Steam Guard..."
+        /home/steam/steamcmd/steamcmd.sh \
+            +force_install_dir /home/steam/stardewvalley \
+            +login "$STEAM_USERNAME" "$STEAM_PASSWORD" \
+            +app_update 413150 validate \
+            +quit
+
+        # Check if download was successful
+        if [ ! -f "/home/steam/stardewvalley/StardewValley" ]; then
+            log_error "Game download failed after Steam Guard verification"
+            log_error "Steam Guard 验证后游戏下载失败"
+            exit 1
+        fi
+
+        log_info "Game downloaded successfully after Steam Guard verification!"
+        log_info "Steam Guard 验证后游戏下载完成！"
+        GAME_DOWNLOADED=true
+
+    # If no Steam Guard, proceed with normal download
+    else
+        log_info "Starting Steam authentication and download..."
+    timeout 900 /home/steam/steamcmd/steamcmd.sh \
         +force_install_dir /home/steam/stardewvalley \
         +login "$STEAM_USERNAME" "$STEAM_PASSWORD" \
         +app_update 413150 validate \
@@ -139,25 +270,31 @@ if [ "$GAME_DOWNLOADED" = false ]; then
         log_steam "Press Ctrl+P, then Ctrl+Q"
         log_steam "========================================"
 
-        # Run SteamCMD again for Steam Guard and download in one session
+        # CRITICAL: Fix permissions again BEFORE Steam Guard download
+        log_info "Setting up permissions for Steam Guard download..."
+        chown -R steam:steam /home/steam/Steam 2>/dev/null || true
+        chown -R steam:steam /home/steam/stardewvalley 2>/dev/null || true
+        chown -R steam:steam /home/steam/.config 2>/dev/null || true
+        sleep 2  # Give permission changes time to take effect
+
+        # Run SteamCMD in interactive mode for Steam Guard
         log_info "Starting Steam authentication with Steam Guard..."
         /home/steam/steamcmd/steamcmd.sh \
             +force_install_dir /home/steam/stardewvalley \
             +login "$STEAM_USERNAME" "$STEAM_PASSWORD" \
             +app_update 413150 validate \
-            +quit 2>&1 | tee /tmp/steam_steam_guard.log
+            +quit
 
-        # Check success after Steam Guard
-        if grep -q "Success! App '413150' fully installed" /tmp/steam_steam_guard.log; then
-            log_info "Game downloaded successfully after Steam Guard verification!"
-            log_info "Steam Guard 验证后游戏下载完成！"
-            GAME_DOWNLOADED=true
-        else
+        # Check if download was successful
+        if [ ! -f "/home/steam/stardewvalley/StardewValley" ]; then
             log_error "Game download failed after Steam Guard verification"
             log_error "Steam Guard 验证后游戏下载失败"
-            log_error "Check /tmp/steam_steam_guard.log for details"
             exit 1
         fi
+
+        log_info "Game downloaded successfully after Steam Guard verification!"
+        log_info "Steam Guard 验证后游戏下载完成！"
+        GAME_DOWNLOADED=true
     elif grep -q "Login Failed" /tmp/steam_download.log || \
          grep -q "Invalid Password" /tmp/steam_download.log; then
         log_error "Steam authentication failed. Please check your credentials."
@@ -296,3 +433,5 @@ log_warn ""
 
 cd /home/steam/stardewvalley
 exec ./StardewModdingAPI --server
+
+fi
