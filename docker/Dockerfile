@@ -27,6 +27,7 @@ RUN dpkg --add-architecture i386 && \
     lib32gcc-s1 \
     libsdl2-2.0-0 \
     libcurl3-gnutls:i386 \
+    gosu \
     && rm -rf /var/lib/apt/lists/*
 
 # Install virtual display and VNC dependencies
