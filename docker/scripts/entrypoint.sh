@@ -51,17 +51,12 @@ if [ -f "/usr/lib/x86_64-linux-gnu/libcurl.so.4" ]; then
     fi
 fi
 
-# CRITICAL: Fix Steam directory permissions BEFORE any Steam operations
-log_info "Setting up critical Steam directory permissions..."
-chown -R steam:steam /home/steam/Steam 2>/dev/null || true
-chown -R steam:steam /home/steam/stardewvalley 2>/dev/null || true
-chown -R steam:steam /home/steam/.config 2>/dev/null || true
-
-# Ensure critical directories exist with correct permissions
-mkdir -p /home/steam/Steam/config
-mkdir -p /home/steam/Steam/logs
-mkdir -p /home/steam/stardewvalley
-chown steam:steam /home/steam/Steam/config /home/steam/Steam/logs /home/steam/stardewvalley 2>/dev/null || true
+# Ensure critical directories exist (may fail if volume is root-owned, that's OK)
+log_info "Setting up Steam directories..."
+mkdir -p /home/steam/Steam/config 2>/dev/null || true
+mkdir -p /home/steam/Steam/logs 2>/dev/null || true
+mkdir -p /home/steam/stardewvalley 2>/dev/null || true
+mkdir -p /home/steam/.config/StardewValley 2>/dev/null || true
 
 log_step "Step 2: Checking Steam credentials..."
 
@@ -101,15 +96,10 @@ if [ "$GAME_DOWNLOADED" = false ]; then
 
     # Clean up any existing Steam files that might be corrupted
     log_info "Cleaning up any corrupted Steam files..."
-    rm -rf /home/steam/Steam/config/*
-    rm -rf /home/steam/Steam/logs/*
-    rm -rf /tmp/steam*
-    rm -f /tmp/steam_*.log
-
-    # Ensure proper permissions before download
-    log_info "Setting up proper permissions for Steam data..."
-    chown -R steam:steam /home/steam/Steam 2>/dev/null || true
-    chown -R steam:steam /home/steam/stardewvalley 2>/dev/null || true
+    rm -rf /home/steam/Steam/config/* 2>/dev/null || true
+    rm -rf /home/steam/Steam/logs/* 2>/dev/null || true
+    rm -rf /tmp/steam* 2>/dev/null || true
+    rm -f /tmp/steam_*.log 2>/dev/null || true
 
     # First, try to detect if Steam Guard is needed
     log_info "Checking if Steam Guard authentication is required..."
@@ -269,13 +259,6 @@ if [ "$GAME_DOWNLOADED" = false ]; then
         log_steam "输入验证码后要分离："
         log_steam "Press Ctrl+P, then Ctrl+Q"
         log_steam "========================================"
-
-        # CRITICAL: Fix permissions again BEFORE Steam Guard download
-        log_info "Setting up permissions for Steam Guard download..."
-        chown -R steam:steam /home/steam/Steam 2>/dev/null || true
-        chown -R steam:steam /home/steam/stardewvalley 2>/dev/null || true
-        chown -R steam:steam /home/steam/.config 2>/dev/null || true
-        sleep 2  # Give permission changes time to take effect
 
         # Run SteamCMD in interactive mode for Steam Guard
         log_info "Starting Steam authentication with Steam Guard..."
