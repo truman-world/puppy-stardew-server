@@ -126,8 +126,17 @@ VNC_PASSWORD=stardew123
 
 ⚠️ **Important**: You MUST own Stardew Valley on Steam. Game files are downloaded via your account.
 
-#### Step 3: Fix Permissions (Critical!)
+#### Step 3: Initialize Data Directories
 
+**⚠️ CRITICAL: This step prevents "Disk write failure" errors!**
+
+**Option A: Using the init script (Recommended):**
+```bash
+# Run the initialization script
+./init.sh
+```
+
+**Option B: Manual setup:**
 ```bash
 # Create data directories
 mkdir -p data/{saves,game,steam}
@@ -138,6 +147,11 @@ chown -R 1000:1000 data/
 # Or use sudo if needed
 sudo chown -R 1000:1000 data/
 ```
+
+**Why is this needed?**
+- Docker creates directories as `root:root` by default
+- The container runs as user `steam` (UID 1000)
+- Without correct permissions, game download will fail with disk write errors
 
 #### Step 4: Start the Server
 
@@ -588,8 +602,17 @@ VNC_PASSWORD=stardew123
 
 ⚠️ **重要**：您必须在 Steam 上拥有星露谷物语。游戏文件通过您的账户下载。
 
-#### 步骤 3：修复权限（关键步骤！）
+#### 步骤 3：初始化数据目录
 
+**⚠️ 关键步骤：此步骤可防止"磁盘写入失败"错误！**
+
+**方式 A：使用初始化脚本（推荐）：**
+```bash
+# 运行初始化脚本
+./init.sh
+```
+
+**方式 B：手动设置：**
 ```bash
 # 创建数据目录
 mkdir -p data/{saves,game,steam}
@@ -600,6 +623,11 @@ chown -R 1000:1000 data/
 # 如果需要，使用 sudo
 sudo chown -R 1000:1000 data/
 ```
+
+**为什么需要这样做？**
+- Docker 默认会将目录创建为 `root:root` 权限
+- 容器以 `steam` 用户（UID 1000）身份运行
+- 如果权限不正确，游戏下载会因磁盘写入错误而失败
 
 #### 步骤 4：启动服务器
 

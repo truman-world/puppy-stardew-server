@@ -1,3 +1,18 @@
+# ============================================
+# IMPORTANT: Run init.sh before first start!
+# 重要：首次启动前请运行 init.sh！
+#
+# ./init.sh
+#
+# This sets up data directories with correct
+# permissions (UID 1000:1000) to avoid disk
+# write failures during game download.
+#
+# 此脚本创建数据目录并设置正确的权限
+# (UID 1000:1000)，避免游戏下载时的磁盘
+# 写入失败。
+# ============================================
+
 services:
   stardew-server:
     image: truemanlive/puppy-stardew-server:v1.0.20
