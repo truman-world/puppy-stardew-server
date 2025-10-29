@@ -244,15 +244,20 @@ namespace AutoHideHost
             {
                 this.Monitor.Log("开始执行睡眠流程...", LogLevel.Info);
 
-                // 此时Game1.currentLocation应该已经是FarmHouse了
-                this.Monitor.Log($"当前location: {Game1.currentLocation.Name}", LogLevel.Info);
+                // 获取房主的homeLocation对象（FarmHouse）
+                string homeLocationName = Game1.player.homeLocation.Value;
+                var homeLocation = Game1.getLocationFromName(homeLocationName);
 
+                this.Monitor.Log($"当前location: {Game1.currentLocation.Name}", LogLevel.Info);
+                this.Monitor.Log($"房主homeLocation: {homeLocationName}", LogLevel.Info);
+
+                // 在FarmHouse location上调用doSleep方法
                 // 使用doSleep方法（Always On Server的方式）
                 // doSleep会直接触发睡眠动画和保存，不需要玩家在床上
-                this.Helper.Reflection.GetMethod(Game1.currentLocation, "doSleep").Invoke();
+                this.Helper.Reflection.GetMethod(homeLocation, "doSleep").Invoke();
 
                 Game1.displayHUD = true;
-                this.Monitor.Log("✓ doSleep已调用！", LogLevel.Info);
+                this.Monitor.Log("✓ doSleep已在FarmHouse上调用！", LogLevel.Info);
             }
             catch (Exception ex)
             {
