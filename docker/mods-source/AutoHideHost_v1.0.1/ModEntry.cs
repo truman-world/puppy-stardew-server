@@ -169,13 +169,10 @@ namespace AutoHideHost
 
             try
             {
-                // 调试：打印所有玩家状态
-                foreach (var farmer in onlineFarmhands)
-                {
-                    this.Monitor.Log($"玩家 {farmer.Name}: isInBed={farmer.isInBed.Value}, timeWentToBed={farmer.timeWentToBed.Value}", LogLevel.Info);
-                }
-
-                bool allFarmhandsInBed = onlineFarmhands.All(farmer => farmer.isInBed.Value);
+                // 检查所有玩家是否真正上床睡觉（不仅isInBed=true，还要timeWentToBed>0）
+                // timeWentToBed>0 表示玩家点击了床，而不是只是站在床上
+                bool allFarmhandsInBed = onlineFarmhands.All(farmer =>
+                    farmer.isInBed.Value && farmer.timeWentToBed.Value > 0);
 
                 if (!allFarmhandsInBed)
                     return;
