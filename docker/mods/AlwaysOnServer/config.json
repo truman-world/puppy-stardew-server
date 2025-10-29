@@ -5,7 +5,7 @@
   "petname": "Perkele",
   "farmcavechoicemushrooms": true,
   "communitycenterrun": true,
-  "timeOfDayToSleep": 600,
+  "timeOfDayToSleep": 2600,
   "allowSleepBeforeTimeOfDayToSleep": true,
   "lockPlayerChests": true,
   "clientsCanPause": false,
