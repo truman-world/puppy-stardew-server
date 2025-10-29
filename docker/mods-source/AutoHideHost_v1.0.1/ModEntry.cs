@@ -198,7 +198,7 @@ namespace AutoHideHost
         }
 
         /// <summary>
-        /// 准备睡眠：传送房主到床的位置
+        /// 准备睡眠：设置床的位置信息（不传送房主，避免黑屏延迟）
         /// </summary>
         private void PrepareToBed()
         {
@@ -229,12 +229,9 @@ namespace AutoHideHost
                     bedY = 13;
                 }
 
-                // 传送房主到床的位置
-                this.Monitor.Log($"传送房主到 {homeLocationName} ({bedX}, {bedY})", LogLevel.Info);
-                Game1.warpFarmer(homeLocationName, bedX, bedY, false);
-
-                // 设置房主为在床上状态
-                Game1.player.isInBed.Value = true;
+                // 不传送房主，只设置床的位置信息
+                // 这样可以避免传送导致的黑屏延迟
+                this.Monitor.Log($"设置床位置: {homeLocationName} ({bedX}, {bedY})", LogLevel.Info);
                 Game1.player.mostRecentBed = new Microsoft.Xna.Framework.Vector2(bedX * 64, bedY * 64);
             }
             catch (Exception ex)
@@ -244,7 +241,7 @@ namespace AutoHideHost
         }
 
         /// <summary>
-        /// 执行睡眠：在传送完成后调用（延迟30 ticks）
+        /// 执行睡眠：设置房主睡眠状态并触发doSleep
         /// </summary>
         private void ExecuteSleep()
         {
@@ -259,12 +256,16 @@ namespace AutoHideHost
                 this.Monitor.Log($"当前location: {Game1.currentLocation.Name}", LogLevel.Info);
                 this.Monitor.Log($"房主homeLocation: {homeLocationName}", LogLevel.Info);
 
-                // 设置房主的睡眠位置为FarmHouse，避免醒来时找不到位置
+                // 设置房主的睡眠状态，确保游戏认为房主也准备好了
+                Game1.player.isInBed.Value = true;
+                Game1.player.timeWentToBed.Value = Game1.timeOfDay;
                 Game1.player.lastSleepLocation.Value = homeLocationName;
                 Game1.player.lastSleepPoint.Value = new Microsoft.Xna.Framework.Point(
                     (int)Game1.player.mostRecentBed.X / 64,
                     (int)Game1.player.mostRecentBed.Y / 64
                 );
+
+                this.Monitor.Log("✓ 房主睡眠状态已设置", LogLevel.Info);
 
                 // 在FarmHouse location上调用doSleep方法
                 // 使用doSleep方法（Always On Server的方式）
