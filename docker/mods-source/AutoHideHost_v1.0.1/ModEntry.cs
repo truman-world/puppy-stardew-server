@@ -251,6 +251,13 @@ namespace AutoHideHost
                 this.Monitor.Log($"当前location: {Game1.currentLocation.Name}", LogLevel.Info);
                 this.Monitor.Log($"房主homeLocation: {homeLocationName}", LogLevel.Info);
 
+                // 设置房主的睡眠位置为FarmHouse，避免醒来时找不到位置
+                Game1.player.lastSleepLocation.Value = homeLocationName;
+                Game1.player.lastSleepPoint.Value = new Microsoft.Xna.Framework.Point(
+                    (int)Game1.player.mostRecentBed.X / 64,
+                    (int)Game1.player.mostRecentBed.Y / 64
+                );
+
                 // 在FarmHouse location上调用doSleep方法
                 // 使用doSleep方法（Always On Server的方式）
                 // doSleep会直接触发睡眠动画和保存，不需要玩家在床上
