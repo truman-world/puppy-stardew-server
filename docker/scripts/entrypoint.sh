@@ -338,10 +338,16 @@ log_step "Step 4: Installing mods..."
 mkdir -p /home/steam/stardewvalley/Mods
 
 if [ -d "/home/steam/preinstalled-mods" ]; then
-    log_info "Installing preinstalled mods..."
-    rm -rf /home/steam/stardewvalley/Mods
-    mkdir -p /home/steam/stardewvalley/Mods
-    cp -r /home/steam/preinstalled-mods/* /home/steam/stardewvalley/Mods/
+    # Check if Mods directory already has content (from volume mount)
+    if [ "$(ls -A /home/steam/stardewvalley/Mods 2>/dev/null)" ]; then
+        log_info "Mods directory already exists with content, skipping installation..."
+        log_info "模组目录已存在且有内容，跳过安装..."
+    else
+        log_info "Installing preinstalled mods..."
+        rm -rf /home/steam/stardewvalley/Mods
+        mkdir -p /home/steam/stardewvalley/Mods
+        cp -r /home/steam/preinstalled-mods/* /home/steam/stardewvalley/Mods/
+    fi
 
     log_info "Installed mods:"
     log_info "已安装模组："
