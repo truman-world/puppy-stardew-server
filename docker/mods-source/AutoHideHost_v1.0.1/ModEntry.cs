@@ -63,11 +63,11 @@ namespace AutoHideHost
             if (!Config.Enabled || !Context.IsMainPlayer)
                 return;
 
-            // 处理延迟睡眠逻辑
+            // 处理延迟睡眠逻辑（已移除传送，只需1 tick延迟）
             if (needToSleep)
             {
                 sleepDelayTicks++;
-                if (sleepDelayTicks >= 30)  // 等待30 ticks（约0.5秒）确保传送完成
+                if (sleepDelayTicks >= 1)  // 只需1 tick延迟，立即执行
                 {
                     ExecuteSleep();
                     needToSleep = false;

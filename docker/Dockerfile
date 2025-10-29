@@ -14,7 +14,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 LABEL maintainer="truemanlive" \
       description="Stardew Valley dedicated server with instant sleep functionality" \
-      version="1.0.32"
+      version="1.0.33"
 
 # Enable 32-bit architecture for SteamCMD
 # 启用32位架构支持以安装SteamCMD
