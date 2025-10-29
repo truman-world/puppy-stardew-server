@@ -8,12 +8,14 @@ using StardewValley.Locations;
 
 namespace AutoHideHost
 {
-    /// <summary>AutoHideHost 模组主入口 - 基于Always On Server的startSleep反射调用</summary>
+    /// <summary>AutoHideHost 模组主入口 - v1.0.3: 修复睡眠触发时机</summary>
     public class ModEntry : Mod
     {
         private ModConfig Config;
         private bool isHostHidden = false;
         private bool hasTriggeredSleep = false;
+        private bool needToSleep = false;  // 新增：延迟睡眠标志
+        private int sleepDelayTicks = 0;   // 新增：睡眠延迟计数器
 
         public override void Entry(IModHelper helper)
         {
@@ -48,6 +50,19 @@ namespace AutoHideHost
         {
             if (!Config.Enabled || !Context.IsMainPlayer)
                 return;
+
+            // 处理延迟睡眠逻辑
+            if (needToSleep)
+            {
+                sleepDelayTicks++;
+                if (sleepDelayTicks >= 30)  // 等待30 ticks（约0.5秒）确保传送完成
+                {
+                    ExecuteSleep();
+                    needToSleep = false;
+                    sleepDelayTicks = 0;
+                }
+                return;  // 睡眠期间跳过其他检查
+            }
 
             if (e.Ticks % 15 == 0 && Config.InstantSleepWhenReady)
             {
@@ -88,6 +103,11 @@ namespace AutoHideHost
 
         private void CheckAndAutoPause()
         {
+            // v1.0.3: 完全禁用自动暂停功能，因为它会导致服务器重启后客户端无法连接
+            // 暂停功能与ServerAutoLoad的自动加载存档功能冲突
+            return;
+
+            /*
             if (!Context.IsMainPlayer || !Config.PauseWhenEmpty || !Context.IsWorldReady)
                 return;
 
@@ -107,17 +127,18 @@ namespace AutoHideHost
                 hasTriggeredSleep = false;
                 this.Monitor.Log($"检测到 {onlineFarmhands} 名玩家在线，已自动恢复", LogLevel.Info);
             }
+            */
         }
 
         /// <summary>
-        /// F-004: 瞬时睡眠转换 - 使用Always On Server的方法
+        /// F-004: 瞬时睡眠转换 - v1.0.3修复：先传送再延迟触发睡眠
         /// </summary>
         private void CheckAndAutoSleep()
         {
             if (!Context.IsMainPlayer || !Config.InstantSleepWhenReady)
                 return;
 
-            if (!Context.IsWorldReady || hasTriggeredSleep)
+            if (!Context.IsWorldReady || hasTriggeredSleep || needToSleep)
                 return;
 
             // CRITICAL FIX: Wait for settlement menu to complete
@@ -148,14 +169,18 @@ namespace AutoHideHost
                 if (!allFarmhandsInBed)
                     return;
 
-                // 所有玩家都在床上了，房主现在也上床
-                this.Monitor.Log($"检测到所有 {onlineFarmhands.Count} 名玩家已上床，房主自动上床触发睡眠", LogLevel.Info);
+                // 所有玩家都在床上了，准备触发睡眠
+                this.Monitor.Log($"检测到所有 {onlineFarmhands.Count} 名玩家已上床，准备传送房主并触发睡眠", LogLevel.Info);
 
-                // 使用Always On Server的方法：传送到床并使用反射调用startSleep
-                GoToBed();
+                // 第一步：传送房主到床
+                PrepareToBed();
 
+                // 第二步：设置延迟睡眠标志，让OnUpdateTicked在几个tick后执行真正的睡眠
+                needToSleep = true;
+                sleepDelayTicks = 0;
                 hasTriggeredSleep = true;
-                this.Monitor.Log("睡眠序列已触发！", LogLevel.Info);
+
+                this.Monitor.Log("✓ 房主已传送，等待30 ticks后触发睡眠...", LogLevel.Info);
             }
             catch (Exception ex)
             {
@@ -165,17 +190,17 @@ namespace AutoHideHost
         }
 
         /// <summary>
-        /// 模仿Always On Server的GoToBed方法
+        /// 准备睡眠：传送房主到床的位置
         /// </summary>
-        private void GoToBed()
+        private void PrepareToBed()
         {
             try
             {
                 // 获取房主的homeLocation
-                string homeLocation = Game1.player.homeLocation.Value;
-                this.Monitor.Log($"房主的homeLocation: {homeLocation}", LogLevel.Info);
+                string homeLocationName = Game1.player.homeLocation.Value;
+                this.Monitor.Log($"房主的homeLocation: {homeLocationName}", LogLevel.Info);
 
-                // 获取床的坐标
+                // 获取床的坐标（根据房屋升级等级）
                 int bedX, bedY;
                 int houseUpgradeLevel = Game1.player.HouseUpgradeLevel;
                 this.Monitor.Log($"房屋升级等级: {houseUpgradeLevel}", LogLevel.Info);
@@ -196,24 +221,41 @@ namespace AutoHideHost
                     bedY = 13;
                 }
 
-                // 传送房主到床的位置 - 使用homeLocation
-                this.Monitor.Log($"传送房主到 {homeLocation} ({bedX}, {bedY})", LogLevel.Info);
-                Game1.warpFarmer(homeLocation, bedX, bedY, false);
+                // 传送房主到床的位置
+                this.Monitor.Log($"传送房主到 {homeLocationName} ({bedX}, {bedY})", LogLevel.Info);
+                Game1.warpFarmer(homeLocationName, bedX, bedY, false);
 
-                // 确保房主在床上
+                // 设置房主为在床上状态
                 Game1.player.isInBed.Value = true;
                 Game1.player.mostRecentBed = new Microsoft.Xna.Framework.Vector2(bedX * 64, bedY * 64);
-
-                // 使用反射调用startSleep方法 - 这是关键！
-                this.Monitor.Log("调用startSleep方法...", LogLevel.Info);
-                this.Helper.Reflection.GetMethod(Game1.currentLocation, "startSleep").Invoke();
-
-                Game1.displayHUD = true;
-                this.Monitor.Log("GoToBed完成！", LogLevel.Info);
             }
             catch (Exception ex)
             {
-                this.Monitor.Log($"GoToBed出错: {ex.Message}", LogLevel.Error);
+                this.Monitor.Log($"PrepareToBed出错: {ex.Message}", LogLevel.Error);
+            }
+        }
+
+        /// <summary>
+        /// 执行睡眠：在传送完成后调用（延迟30 ticks）
+        /// </summary>
+        private void ExecuteSleep()
+        {
+            try
+            {
+                this.Monitor.Log("开始执行睡眠流程...", LogLevel.Info);
+
+                // 此时Game1.currentLocation应该已经是FarmHouse了
+                this.Monitor.Log($"当前location: {Game1.currentLocation.Name}", LogLevel.Info);
+
+                // 调用startSleep方法
+                this.Helper.Reflection.GetMethod(Game1.currentLocation, "startSleep").Invoke();
+
+                Game1.displayHUD = true;
+                this.Monitor.Log("✓ startSleep已调用！", LogLevel.Info);
+            }
+            catch (Exception ex)
+            {
+                this.Monitor.Log($"ExecuteSleep出错: {ex.Message}", LogLevel.Error);
                 this.Monitor.Log($"堆栈: {ex.StackTrace}", LogLevel.Error);
             }
         }
