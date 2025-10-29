@@ -43,6 +43,17 @@ namespace AutoHideHost
                 return;
             HideHost();
             hasTriggeredSleep = false;
+
+            // 重置所有玩家的isInBed状态，防止无限睡眠循环
+            foreach (var farmer in Game1.getAllFarmers())
+            {
+                if (farmer.isInBed.Value)
+                {
+                    farmer.isInBed.Value = false;
+                    this.Monitor.Log($"重置玩家 {farmer.Name} 的isInBed状态", LogLevel.Debug);
+                }
+            }
+
             LogDebug("新的一天，房主重新隐藏");
         }
 
