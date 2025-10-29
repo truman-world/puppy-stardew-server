@@ -247,11 +247,12 @@ namespace AutoHideHost
                 // 此时Game1.currentLocation应该已经是FarmHouse了
                 this.Monitor.Log($"当前location: {Game1.currentLocation.Name}", LogLevel.Info);
 
-                // 调用startSleep方法
-                this.Helper.Reflection.GetMethod(Game1.currentLocation, "startSleep").Invoke();
+                // 使用doSleep方法（Always On Server的方式）
+                // doSleep会直接触发睡眠动画和保存，不需要玩家在床上
+                this.Helper.Reflection.GetMethod(Game1.currentLocation, "doSleep").Invoke();
 
                 Game1.displayHUD = true;
-                this.Monitor.Log("✓ startSleep已调用！", LogLevel.Info);
+                this.Monitor.Log("✓ doSleep已调用！", LogLevel.Info);
             }
             catch (Exception ex)
             {
