@@ -14,7 +14,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 LABEL maintainer="truemanlive" \
       description="Stardew Valley dedicated server with instant sleep functionality" \
-      version="1.0.22"
+      version="1.0.23"
 
 # Enable 32-bit architecture for SteamCMD
 # 启用32位架构支持以安装SteamCMD
@@ -73,10 +73,14 @@ RUN chown -R steam:steam /home/steam/preinstalled-mods && \
     chmod -R 755 /home/steam/preinstalled-mods
 USER steam
 
-# Copy entrypoint script
-# 复制启动脚本
+# Copy scripts
+# 复制脚本
+RUN mkdir -p /home/steam/scripts
 COPY --chown=steam:steam scripts/entrypoint.sh /home/steam/entrypoint.sh
-RUN chmod +x /home/steam/entrypoint.sh
+COPY --chown=steam:steam scripts/log-manager.sh /home/steam/scripts/log-manager.sh
+COPY --chown=steam:steam scripts/log-monitor.sh /home/steam/scripts/log-monitor.sh
+COPY --chown=steam:steam scripts/view-logs.sh /home/steam/scripts/view-logs.sh
+RUN chmod +x /home/steam/entrypoint.sh /home/steam/scripts/*.sh
 
 # Switch to steam user for running the server
 # 切换到 steam 用户运行服务器

@@ -402,8 +402,31 @@ if [ "$ENABLE_VNC" = "true" ]; then
 fi
 log_info "==================================="
 
+# Setup log management
+log_step "Step 8: Setting up log management..."
+
+# Start log monitor in background (if enabled)
+if [ "$ENABLE_LOG_MONITOR" != "false" ]; then
+    log_info "Starting log monitor..."
+    bash /home/steam/scripts/log-monitor.sh &
+    LOG_MONITOR_PID=$!
+    log_info "Log monitor started (PID: $LOG_MONITOR_PID)"
+
+    # Setup log rotation cron (runs every 6 hours)
+    (
+        while true; do
+            sleep 21600  # 6 hours
+            bash /home/steam/scripts/log-manager.sh
+        done
+    ) &
+    LOG_MANAGER_PID=$!
+    log_info "Log manager scheduled (PID: $LOG_MANAGER_PID)"
+else
+    log_info "Log monitoring disabled"
+fi
+
 # Start game server
-log_step "Step 8: Starting Stardew Valley server..."
+log_step "Step 9: Starting Stardew Valley server..."
 log_info "Server is starting. This may take a minute..."
 log_info "服务器正在启动。可能需要一分钟..."
 log_warn ""
