@@ -8,7 +8,7 @@ using StardewValley.Locations;
 
 namespace AutoHideHost
 {
-    /// <summary>AutoHideHost 模组主入口 - v1.4.0: 使用Team Ready API</summary>
+    /// <summary>AutoHideHost 模组主入口 - v1.4.1: 自动启用Always On Server</summary>
     public class ModEntry : Mod
     {
         private ModConfig Config;
@@ -18,6 +18,11 @@ namespace AutoHideHost
         private int sleepDelayTicks = 0;
         private bool isSleepInProgress = false;
         private bool handledReadyCheck = false;  // v1.4.0: 防止重复处理同一个ReadyCheck
+
+        // v1.4.1: Always On Server 自动启用相关
+        private bool alwaysOnServerChecked = false;
+        private int alwaysOnServerCheckTicks = 0;
+        private bool needToCheckAlwaysOnServer = false;
 
         public override void Entry(IModHelper helper)
         {
@@ -35,10 +40,20 @@ namespace AutoHideHost
 
         private void OnSaveLoaded(object sender, SaveLoadedEventArgs e)
         {
-            if (!Context.IsMainPlayer || !Config.Enabled || !Config.AutoHideOnLoad)
+            if (!Context.IsMainPlayer || !Config.Enabled)
                 return;
-            HideHost();
-            this.Monitor.Log("存档已加载，房主自动隐藏", LogLevel.Info);
+
+            // v1.4.1: 启动 Always On Server 检查（延迟3秒，等待ServerAutoLoad设置多人模式）
+            needToCheckAlwaysOnServer = true;
+            alwaysOnServerCheckTicks = 0;
+            alwaysOnServerChecked = false;
+            this.Monitor.Log("存档已加载，3秒后检查 Always On Server 状态", LogLevel.Info);
+
+            if (Config.AutoHideOnLoad)
+            {
+                HideHost();
+                this.Monitor.Log("房主自动隐藏", LogLevel.Info);
+            }
         }
 
         private void OnDayStarted(object sender, DayStartedEventArgs e)
@@ -180,6 +195,20 @@ namespace AutoHideHost
         {
             if (!Config.Enabled || !Context.IsMainPlayer)
                 return;
+
+            // v1.4.1: 检查并自动启用 Always On Server
+            if (needToCheckAlwaysOnServer && !alwaysOnServerChecked)
+            {
+                alwaysOnServerCheckTicks++;
+
+                // 延迟180 ticks (3秒)，给 ServerAutoLoad 时间设置多人模式
+                if (alwaysOnServerCheckTicks >= 180)
+                {
+                    alwaysOnServerChecked = true;
+                    needToCheckAlwaysOnServer = false;
+                    CheckAndEnableAlwaysOnServer();
+                }
+            }
 
             // v1.4.0: 全局菜单和Ready状态处理
             if (e.Ticks % 30 == 0)  // 每0.5秒执行一次
@@ -835,6 +864,124 @@ namespace AutoHideHost
             {
                 this.Monitor.Log($"点击ReadyCheckDialog失败: {ex.Message}", LogLevel.Error);
             }
+        }
+
+        /// <summary>
+        /// v1.4.1: 检查并自动启用 Always On Server
+        /// </summary>
+        private void CheckAndEnableAlwaysOnServer()
+        {
+            try
+            {
+                // 检查是否是服务器模式
+                if (!Game1.IsServer)
+                {
+                    this.Monitor.Log("当前不是服务器模式，跳过 Always On Server 检查", LogLevel.Debug);
+                    return;
+                }
+
+                // 检查 Always On Server 模组是否加载
+                var alwaysOnServerMod = this.Helper.ModRegistry.Get("mikko.Always_On_Server");
+                if (alwaysOnServerMod == null)
+                {
+                    this.Monitor.Log("未检测到 Always On Server 模组", LogLevel.Warn);
+                    return;
+                }
+
+                this.Monitor.Log("检测到 Always On Server 模组已加载", LogLevel.Info);
+                this.Monitor.Log("尝试通过反射启用 Always On Server 的 Server Mode...", LogLevel.Info);
+
+                // 通过反射直接设置 Always On Server 的 IsEnabled 字段
+                // 这是最可靠的自动化方法
+                try
+                {
+                    // 从 IModInfo 获取模组的 Mod 实例（即 ModEntry）
+                    var modInstance = this.Helper.Reflection.GetProperty<object>(
+                        alwaysOnServerMod,
+                        "Mod",
+                        required: false)?.GetValue();
+
+                    if (modInstance != null)
+                    {
+                        this.Monitor.Log("成功获取 Always On Server 模组实例", LogLevel.Debug);
+
+                        // 尝试设置 IsEnabled 字段
+                        var isEnabledField = this.Helper.Reflection.GetField<bool>(
+                            modInstance,
+                            "IsEnabled",
+                            required: false);
+
+                        if (isEnabledField != null)
+                        {
+                            // 检查当前状态
+                            bool currentValue = isEnabledField.GetValue();
+
+                            if (!currentValue)
+                            {
+                                // 设置为启用
+                                isEnabledField.SetValue(true);
+                                this.Monitor.Log("✓ 已通过反射启用 Always On Server", LogLevel.Info);
+                                this.Monitor.Log("✓ 自动暂停功能已启用（没有玩家时暂停，有玩家时继续）", LogLevel.Info);
+
+                                // 在聊天框显示消息（延迟一帧以确保Game1.chatBox可用）
+                                if (Game1.chatBox != null)
+                                {
+                                    Game1.chatBox.addInfoMessage("The Host is in Server Mode! (Auto-enabled by AutoHideHost)");
+                                }
+                            }
+                            else
+                            {
+                                this.Monitor.Log("✓ Always On Server 已经是启用状态", LogLevel.Info);
+                            }
+                        }
+                        else
+                        {
+                            this.Monitor.Log("× 无法通过反射找到 IsEnabled 字段", LogLevel.Warn);
+                            ShowManualEnableInstructions();
+                        }
+                    }
+                    else
+                    {
+                        this.Monitor.Log("× 无法获取 Always On Server 模组实例", LogLevel.Warn);
+                        ShowManualEnableInstructions();
+                    }
+                }
+                catch (Exception reflectionEx)
+                {
+                    this.Monitor.Log($"反射启用失败: {reflectionEx.Message}", LogLevel.Warn);
+                    this.Monitor.Log($"堆栈: {reflectionEx.StackTrace}", LogLevel.Debug);
+                    ShowManualEnableInstructions();
+                }
+            }
+            catch (Exception ex)
+            {
+                this.Monitor.Log($"启用 Always On Server 时出错: {ex.Message}", LogLevel.Error);
+                this.Monitor.Log($"堆栈: {ex.StackTrace}", LogLevel.Debug);
+            }
+        }
+
+        /// <summary>
+        /// v1.1.2: 显示手动启用 Always On Server 的说明
+        /// </summary>
+        private void ShowManualEnableInstructions()
+        {
+            this.Monitor.Log("", LogLevel.Info);
+            this.Monitor.Log("==========================================", LogLevel.Info);
+            this.Monitor.Log("⚠ MANUAL ACTION REQUIRED / 需要手动操作", LogLevel.Info);
+            this.Monitor.Log("==========================================", LogLevel.Info);
+            this.Monitor.Log("", LogLevel.Info);
+            this.Monitor.Log("请手动启用 Always On Server 以使用自动暂停功能：", LogLevel.Info);
+            this.Monitor.Log("Please manually enable Always On Server for auto-pause:", LogLevel.Info);
+            this.Monitor.Log("", LogLevel.Info);
+            this.Monitor.Log("方法1 / Method 1: 通过 VNC 连接，按 F9 键", LogLevel.Info);
+            this.Monitor.Log("                  Connect via VNC, press F9 key", LogLevel.Info);
+            this.Monitor.Log("方法2 / Method 2: 在游戏内控制台输入: server", LogLevel.Info);
+            this.Monitor.Log("                  In-game console, type: server", LogLevel.Info);
+            this.Monitor.Log("", LogLevel.Info);
+            this.Monitor.Log("启用后游戏将在没有玩家时自动暂停", LogLevel.Info);
+            this.Monitor.Log("Game will auto-pause when no players are online", LogLevel.Info);
+            this.Monitor.Log("==========================================", LogLevel.Info);
+            this.Monitor.Log("", LogLevel.Info);
         }
 
         private void LogDebug(string message)
