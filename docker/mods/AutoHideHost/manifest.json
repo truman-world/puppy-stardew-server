@@ -1,8 +1,8 @@
 {
   "Name": "AutoHideHost",
   "Author": "AI Developer",
-  "Version": "1.1.3",
-  "Description": "Automatically hides the host player in multiplayer servers and provides seamless day-night transitions without waiting prompts. v1.1.3: Improved auto-enable Always On Server with multi-method fallback.",
+  "Version": "1.1.4",
+  "Description": "Automatically hides the host player in multiplayer servers and provides seamless day-night transitions without waiting prompts. v1.1.4: Auto-reject quest notices to prevent sleep blocking.",
   "UniqueID": "AIdev.AutoHideHost",
   "EntryDll": "AutoHideHost.dll",
   "MinimumApiVersion": "4.0.0",

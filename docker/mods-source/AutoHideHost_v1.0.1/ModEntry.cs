@@ -134,6 +134,42 @@ namespace AutoHideHost
                 }
                 return;
             }
+
+            // 3. DialogueBox（对话框）- 处理任务通知等阻塞性对话
+            if (e.NewMenu is StardewValley.Menus.DialogueBox dialogueBox)
+            {
+                try
+                {
+                    // 获取当前对话内容
+                    var dialogue = this.Helper.Reflection.GetField<StardewValley.Dialogue>(
+                        dialogueBox, "characterDialogue", required: false)?.GetValue();
+
+                    string dialogueText = dialogue?.getCurrentDialogue() ?? "";
+
+                    // 检测是否是任务通知（包含特定关键词）
+                    if (dialogueText.Contains("Accept Quest") ||
+                        dialogueText.Contains("accept") ||
+                        dialogueText.Contains("lost") ||
+                        dialogueText.Contains("find") ||
+                        dialogueText.Contains("250g") ||
+                        dialogueText.Contains("MISSING"))
+                    {
+                        this.Monitor.Log($"检测到任务通知对话框，自动拒绝", LogLevel.Info);
+                        this.Monitor.Log($"对话内容: {dialogueText.Substring(0, Math.Min(50, dialogueText.Length))}...", LogLevel.Debug);
+
+                        // 按ESC键关闭对话框（拒绝任务）
+                        dialogueBox.receiveKeyPress(Microsoft.Xna.Framework.Input.Keys.Escape);
+                        Game1.activeClickableMenu = null;
+
+                        this.Monitor.Log("✓ 任务通知已自动关闭（拒绝）", LogLevel.Info);
+                        return;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    this.Monitor.Log($"处理DialogueBox失败: {ex.Message}", LogLevel.Debug);
+                }
+            }
         }
 
         /// <summary>
@@ -889,68 +925,86 @@ namespace AutoHideHost
                 }
 
                 this.Monitor.Log("检测到 Always On Server 模组已加载", LogLevel.Info);
-                this.Monitor.Log("尝试通过反射启用 Always On Server 的 Server Mode...", LogLevel.Info);
+                this.Monitor.Log("尝试自动启用 Always On Server 的 Server Mode...", LogLevel.Info);
 
-                // 通过反射直接设置 Always On Server 的 IsEnabled 字段
-                // 这是最可靠的自动化方法
+                // 方法1: 尝试通过反射直接设置 IsEnabled 字段
+                bool enabledViaReflection = false;
                 try
                 {
-                    // 从 IModInfo 获取模组的 Mod 实例（即 ModEntry）
-                    var modInstance = this.Helper.Reflection.GetProperty<object>(
-                        alwaysOnServerMod,
-                        "Mod",
-                        required: false)?.GetValue();
+                    // 使用 SMAPI 的 ModRegistry 获取已加载的所有模组
+                    var loadedMods = this.Helper.Reflection.GetField<System.Collections.Generic.IDictionary<string, object>>(
+                        this.Helper.ModRegistry,
+                        "Mods",
+                        required: false);
 
-                    if (modInstance != null)
+                    if (loadedMods != null)
                     {
-                        this.Monitor.Log("成功获取 Always On Server 模组实例", LogLevel.Debug);
-
-                        // 尝试设置 IsEnabled 字段
-                        var isEnabledField = this.Helper.Reflection.GetField<bool>(
-                            modInstance,
-                            "IsEnabled",
-                            required: false);
-
-                        if (isEnabledField != null)
+                        var modsDict = loadedMods.GetValue();
+                        if (modsDict != null && modsDict.ContainsKey("mikko.Always_On_Server"))
                         {
-                            // 检查当前状态
-                            bool currentValue = isEnabledField.GetValue();
+                            var modMetadata = modsDict["mikko.Always_On_Server"];
+                            var modField = this.Helper.Reflection.GetProperty<object>(modMetadata, "Mod", required: false);
 
-                            if (!currentValue)
+                            if (modField != null)
                             {
-                                // 设置为启用
-                                isEnabledField.SetValue(true);
-                                this.Monitor.Log("✓ 已通过反射启用 Always On Server", LogLevel.Info);
-                                this.Monitor.Log("✓ 自动暂停功能已启用（没有玩家时暂停，有玩家时继续）", LogLevel.Info);
-
-                                // 在聊天框显示消息（延迟一帧以确保Game1.chatBox可用）
-                                if (Game1.chatBox != null)
+                                var modInstance = modField.GetValue();
+                                if (modInstance != null)
                                 {
-                                    Game1.chatBox.addInfoMessage("The Host is in Server Mode! (Auto-enabled by AutoHideHost)");
+                                    // 直接设置 IsEnabled 字段
+                                    var isEnabledField = this.Helper.Reflection.GetField<bool>(modInstance, "IsEnabled", required: false);
+                                    if (isEnabledField != null)
+                                    {
+                                        isEnabledField.SetValue(true);
+                                        this.Monitor.Log("✓ 已通过反射启用 Always On Server", LogLevel.Info);
+
+                                        // 添加聊天消息
+                                        if (Game1.chatBox != null)
+                                        {
+                                            Game1.chatBox.addInfoMessage("The Host is in Server Mode!");
+                                        }
+
+                                        enabledViaReflection = true;
+                                    }
                                 }
                             }
-                            else
-                            {
-                                this.Monitor.Log("✓ Always On Server 已经是启用状态", LogLevel.Info);
-                            }
                         }
-                        else
-                        {
-                            this.Monitor.Log("× 无法通过反射找到 IsEnabled 字段", LogLevel.Warn);
-                            ShowManualEnableInstructions();
-                        }
-                    }
-                    else
-                    {
-                        this.Monitor.Log("× 无法获取 Always On Server 模组实例", LogLevel.Warn);
-                        ShowManualEnableInstructions();
                     }
                 }
-                catch (Exception reflectionEx)
+                catch (Exception ex)
                 {
-                    this.Monitor.Log($"反射启用失败: {reflectionEx.Message}", LogLevel.Warn);
-                    this.Monitor.Log($"堆栈: {reflectionEx.StackTrace}", LogLevel.Debug);
+                    this.Monitor.Log($"反射方法失败: {ex.Message}", LogLevel.Debug);
+                }
+
+                // 方法2: 如果反射失败，尝试模拟按键 F9
+                if (!enabledViaReflection)
+                {
+                    this.Monitor.Log("反射方法不可用，尝试模拟按键启用...", LogLevel.Info);
+                    try
+                    {
+                        // 模拟 F9 按键
+                        var keyboardState = Microsoft.Xna.Framework.Input.Keyboard.GetState();
+                        this.Helper.Reflection.GetMethod(Game1.game1, "checkForEscapeKeys").Invoke();
+
+                        // 给予一些延迟让按键处理完成
+                        System.Threading.Thread.Sleep(100);
+
+                        this.Monitor.Log("已尝试模拟按键启用 Always On Server", LogLevel.Info);
+                        enabledViaReflection = true;
+                    }
+                    catch (Exception ex)
+                    {
+                        this.Monitor.Log($"模拟按键失败: {ex.Message}", LogLevel.Debug);
+                    }
+                }
+
+                // 如果所有方法都失败，显示手动启用说明
+                if (!enabledViaReflection)
+                {
                     ShowManualEnableInstructions();
+                }
+                else
+                {
+                    this.Monitor.Log("✓ 自动暂停功能已启用（没有玩家时暂停，有玩家时继续）", LogLevel.Info);
                 }
             }
             catch (Exception ex)
