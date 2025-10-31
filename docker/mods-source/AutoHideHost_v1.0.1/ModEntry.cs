@@ -170,6 +170,24 @@ namespace AutoHideHost
                     this.Monitor.Log($"处理DialogueBox失败: {ex.Message}", LogLevel.Debug);
                 }
             }
+
+            // 4. LetterViewerMenu（信件查看菜单）- 自动关闭以避免阻塞睡眠
+            if (e.NewMenu is StardewValley.Menus.LetterViewerMenu letterMenu)
+            {
+                this.Monitor.Log("检测到LetterViewerMenu（信件菜单），自动关闭", LogLevel.Info);
+                try
+                {
+                    // 按ESC键关闭信件菜单
+                    letterMenu.receiveKeyPress(Microsoft.Xna.Framework.Input.Keys.Escape);
+                    Game1.activeClickableMenu = null;
+                    this.Monitor.Log("✓ LetterViewerMenu已自动关闭", LogLevel.Info);
+                }
+                catch (Exception ex)
+                {
+                    this.Monitor.Log($"关闭LetterViewerMenu失败: {ex.Message}", LogLevel.Error);
+                }
+                return;
+            }
         }
 
         /// <summary>
