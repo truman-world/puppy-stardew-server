@@ -441,5 +441,18 @@ log_warn "首次运行：您必须通过 VNC 创建或加载存档！"
 log_warn ""
 
 cd /home/steam/stardewvalley
-exec ./StardewModdingAPI --server
+
+# Start SMAPI in tmux session for command injection
+log_info "Starting SMAPI in tmux session..."
+tmux new-session -d -s smapi "./StardewModdingAPI --server"
+
+# Start auto-enable-server script in background
+log_info "Starting Always On Server auto-enable service..."
+bash /home/steam/scripts/auto-enable-server.sh &
+AUTO_ENABLE_PID=$!
+log_info "Auto-enable service started (PID: $AUTO_ENABLE_PID)"
+
+# Attach to tmux to keep container running
+log_info "Attaching to SMAPI console..."
+tmux attach-session -t smapi
 
