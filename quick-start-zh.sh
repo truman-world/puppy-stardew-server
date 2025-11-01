@@ -170,10 +170,15 @@ start_server() {
     echo ""
 
     print_info "拉取 Docker 镜像（可能需要几分钟）..."
-    if docker compose pull 2>&1 | grep -q "Error"; then
+    echo ""
+    # 显示拉取进度
+    if docker compose pull; then
+        print_success "镜像拉取完成！"
+    else
         print_warning "拉取镜像时出现错误，尝试启动..."
     fi
 
+    echo ""
     print_info "启动服务器..."
     if docker compose up -d; then
         print_success "服务器已启动！"
@@ -230,11 +235,13 @@ print_next_steps() {
     echo ""
 
     echo -e "${BOLD}2. 如果启用了 Steam 令牌：${NC}"
-    echo "   - 您会看到要求输入 Steam 令牌代码的消息"
-    echo "   - 附加到容器："
+    echo "   - 检查日志中是否有要求输入令牌代码的消息："
+    echo -e "     ${CYAN}docker logs puppy-stardew | grep -i \"steam guard\"${NC}"
+    echo "   - 如果看到 \"Steam Guard code:\" 提示，附加到容器："
     echo -e "     ${CYAN}docker attach puppy-stardew${NC}"
-    echo "   - 输入从邮件/手机应用获取的 Steam 令牌代码"
-    echo -e "   - 按 ${YELLOW}Ctrl+P Ctrl+Q${NC} 分离（不要按 Ctrl+C！）"
+    echo "   - 输入从邮件/手机应用获取的 Steam 令牌代码并按回车"
+    echo -e "   - ${YELLOW}重要：${NC}输入后等待3-5秒，确认开始下载游戏"
+    echo -e "   - 然后按 ${YELLOW}Ctrl+P Ctrl+Q${NC} 分离（${RED}不要按 Ctrl+C！${NC}）"
     echo ""
 
     echo -e "${BOLD}3. 通过 VNC 初始设置（仅首次）：${NC}"
@@ -253,10 +260,12 @@ print_next_steps() {
 
     echo -e "${BOLD}常用命令：${NC}"
     echo -e "   查看日志:        ${CYAN}docker logs -f puppy-stardew${NC}"
-    echo -e "   重启服务器:      ${CYAN}docker compose restart${NC}"
+    echo -e "   重启服务器:      ${CYAN}docker compose down && docker compose up -d${NC}"
     echo -e "   停止服务器:      ${CYAN}docker compose down${NC}"
     echo -e "   检查健康:        ${CYAN}./health-check.sh${NC}"
     echo -e "   备份存档:        ${CYAN}./backup.sh${NC}"
+    echo ""
+    echo -e "${YELLOW}   ⚠️  注意: 修改 .env 后必须重启才能生效！${NC}"
     echo ""
 
     echo -e "${GREEN}${BOLD}🌟 享受您的即时睡眠星露谷服务器！${NC}"

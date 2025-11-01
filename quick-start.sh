@@ -265,11 +265,13 @@ show_next_steps() {
     echo ""
 
     echo -e "${BOLD}2. If Steam Guard is enabled:${NC}"
-    echo "   - You'll see a message asking for a Steam Guard code"
-    echo "   - Attach to the container:"
+    echo "   - Check logs for Steam Guard prompt:"
+    echo -e "     ${CYAN}docker logs puppy-stardew | grep -i \"steam guard\"${NC}"
+    echo "   - If you see \"Steam Guard code:\" prompt, attach to the container:"
     echo -e "     ${CYAN}docker attach puppy-stardew${NC}"
-    echo "   - Enter your Steam Guard code from email/mobile app"
-    echo -e "   - Press ${YELLOW}Ctrl+P Ctrl+Q${NC} to detach (NOT Ctrl+C!)"
+    echo "   - Enter your Steam Guard code from email/mobile app and press Enter"
+    echo -e "   - ${YELLOW}Important:${NC} Wait 3-5 seconds after entering to confirm game download starts"
+    echo -e "   - Then press ${YELLOW}Ctrl+P Ctrl+Q${NC} to detach (${RED}NOT Ctrl+C!${NC})"
     echo ""
 
     echo -e "${BOLD}3. Initial setup via VNC (first time only):${NC}"
@@ -288,10 +290,12 @@ show_next_steps() {
 
     echo -e "${BOLD}Useful commands:${NC}"
     echo -e "   View logs:        ${CYAN}docker logs -f puppy-stardew${NC}"
-    echo -e "   Restart server:   ${CYAN}docker compose restart${NC}"
+    echo -e "   Restart server:   ${CYAN}docker compose down && docker compose up -d${NC}"
     echo -e "   Stop server:      ${CYAN}docker compose down${NC}"
     echo -e "   Check health:     ${CYAN}./health-check.sh${NC}"
     echo -e "   Backup saves:     ${CYAN}./backup.sh${NC}"
+    echo ""
+    echo -e "${YELLOW}   ⚠️  Note: After modifying .env, you must restart for changes to take effect!${NC}"
     echo ""
 
     echo -e "${GREEN}${BOLD}🌟 Enjoy your instant-sleep Stardew Valley server!${NC}"
