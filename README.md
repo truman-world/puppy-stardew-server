@@ -19,6 +19,94 @@
 
 ## English
 
+### Project Architecture
+
+```mermaid
+graph TB
+    subgraph "Client Layer"
+        PC[PC Players]
+        Mobile[iOS/Android Players]
+        Console[Console Players]
+    end
+
+    subgraph "Network Layer"
+        FW[Firewall<br/>Port 24642/UDP]
+        VNC[VNC Access<br/>Port 5900/TCP]
+    end
+
+    subgraph "Docker Container"
+        Entry[Entrypoint Script]
+        Steam[SteamCMD<br/>Game Downloader]
+        SMAPI[SMAPI 4.3.2<br/>Mod Loader]
+
+        subgraph "Game Mods"
+            AHH[AutoHideHost v1.1.9<br/>Instant Sleep + Hidden Host]
+            AOS[Always On Server v1.20.3<br/>24/7 Automation]
+            SAL[ServerAutoLoad v1.2.1<br/>Auto Load Save]
+        end
+
+        Game[Stardew Valley 1.6.15<br/>Game Server]
+    end
+
+    subgraph "Data Persistence"
+        Saves[(Save Files)]
+        Config[(Mod Configs)]
+        SteamData[(Steam Cache)]
+    end
+
+    PC --> FW
+    Mobile --> FW
+    Console --> FW
+    FW --> Game
+
+    VNC -.-> Entry
+    Entry --> Steam
+    Steam --> SMAPI
+    SMAPI --> AHH
+    SMAPI --> AOS
+    SMAPI --> SAL
+    AHH --> Game
+    AOS --> Game
+    SAL --> Game
+
+    Game -.-> Saves
+    Game -.-> Config
+    Steam -.-> SteamData
+
+    style AHH fill:#90EE90
+    style Game fill:#FFD700
+    style SMAPI fill:#87CEEB
+```
+
+### Deployment Flow
+
+```mermaid
+graph LR
+    A[Run Quick Start Script] --> B{Docker Installed?}
+    B -->|No| C[Install Docker]
+    B -->|Yes| D[Enter Steam Credentials]
+    C --> D
+    D --> E[Create Directories<br/>UID 1000:1000]
+    E --> F[Generate .env File]
+    F --> G[Pull Docker Image]
+    G --> H[Start Container]
+    H --> I{Steam Guard?}
+    I -->|Yes| J[Enter Code via docker attach]
+    I -->|No| K[Download Game Files]
+    J --> K
+    K --> L[Install SMAPI]
+    L --> M[Load Pre-installed Mods]
+    M --> N{First Run?}
+    N -->|Yes| O[Connect VNC<br/>Load Save]
+    N -->|No| P[Auto-Load Save]
+    O --> Q[Server Ready!]
+    P --> Q
+    Q --> R[Players Connect]
+
+    style Q fill:#90EE90
+    style R fill:#FFD700
+```
+
 ### Deploy Your Stardew Valley Server in 3 Minutes
 
 Setting up a **Stardew Valley dedicated server** has never been easier! With **one simple command**, you can have your own 24/7 multiplayer server running on **any platform** - PC, Mac, Linux, iOS, and Android players can all join together.
@@ -30,7 +118,7 @@ Setting up a **Stardew Valley dedicated server** has never been easier! With **o
 - ✅ **Easy Setup** - One command deployment with Docker Compose
 - ✅ **Low Resource Usage** - Runs smoothly on just 2GB RAM
 
-### ✨ Key Features
+### Key Features
 
 - **One-Command Deploy** - Deploy in 3 minutes with a single command
 - **Cross-Platform Support** 📱 - PC, Mac, Linux, iOS, Android all supported
@@ -41,6 +129,7 @@ Setting up a **Stardew Valley dedicated server** has never been easier! With **o
 - **VNC Remote Access** 🖥️ - Built-in VNC for easy first-time setup
 - **Instant Sleep** 🛏️ - Bonus feature: Players can sleep at any time without waiting
 - **Hidden Host** 👻 - Host player is automatically hidden for seamless gameplay
+- **Guard Window Protection** 🛡️ - NEW: Prevents host from appearing at Farm entrance
 
 <div align="center">
 
@@ -49,6 +138,20 @@ Setting up a **Stardew Valley dedicated server** has never been easier! With **o
 *Bonus Feature: Instant sleep - Click bed → Sleep instantly → New day begins!*
 
 </div>
+
+### What's New in Latest Version
+
+#### v1.0.29 (November 2025)
+
+**AutoHideHost v1.1.9 - Major Fix:**
+- ✅ **FIXED:** Host no longer appears at Farm entrance when players connect
+- ✅ **NEW:** Guard window mechanism activates daily at day start
+- ✅ **IMPROVED:** Multi-day persistence - works indefinitely across daily cycles
+- ✅ **ENHANCED:** Diagnostic logging for warp detection
+
+**Infrastructure:**
+- ✅ **OPTIMIZED:** CPU limit adjusted to 1.0 core for stability testing
+- ✅ **IMPROVED:** Resource efficiency for long-term 24/7 operation
 
 ### Quick Start (2 Options)
 
@@ -173,7 +276,7 @@ docker attach puppy-stardew
 
 </details>
 
-### 🎮 Initial Setup (First Run Only)
+### Initial Setup (First Run Only)
 
 After the server starts, you need to create or load a save file **once**:
 
@@ -197,24 +300,30 @@ After the server starts, you need to create or load a save file **once**:
    - Your server should appear in the list
    - Or manually enter: `your-server-ip:24642`
 
-### 📦 What's Inside
+### What's Inside
 
 #### Pre-installed Mods
 
-| Mod | Version | Purpose |
-|-----|---------|---------|
-| **AutoHideHost** | v1.0.0 | Custom mod - Hides host player and enables instant sleep |
-| **Always On Server** | v1.20.3 | Keeps server running 24/7 without host player |
-| **ServerAutoLoad** | v1.2.1 | Custom mod - Automatically loads your save on startup |
+| Mod | Version | Purpose | New Features |
+|-----|---------|---------|--------------|
+| **AutoHideHost** | v1.1.9 | Custom mod - Hides host player and enables instant sleep | ✨ **Guard window** prevents Farm warp |
+| **Always On Server** | v1.20.3 | Keeps server running 24/7 without host player | - |
+| **ServerAutoLoad** | v1.2.1 | Custom mod - Automatically loads your save on startup | - |
+
+**AutoHideHost v1.1.9 Highlights:**
+- 🎯 **Fixed**: Host no longer teleports to Farm entrance at 6:40 AM
+- 🛡️ **New**: Guard window mechanism with daily refresh
+- ⚡ **Instant**: Re-hide delay < 1 game tick
+- 🔄 **Persistent**: Works across multiple consecutive days
 
 All mods are pre-configured and ready to use!
 
-### 🛠️ Common Tasks
+### Common Tasks
 
 <details>
 <summary><b>View Server Logs</b></summary>
 
-#### 📺 Demo: Viewing Server Logs
+#### Demo: Viewing Server Logs
 
 [![asciicast](https://asciinema.org/a/ny9f5DL7FPXhAfApmu2HGhkI8.svg)](https://asciinema.org/a/ny9f5DL7FPXhAfApmu2HGhkI8)
 
@@ -256,7 +365,7 @@ docker compose up -d
 <details>
 <summary><b>Backup Your Saves</b></summary>
 
-#### 📺 Demo: Creating a Backup
+#### Demo: Creating a Backup
 
 [![asciicast](https://asciinema.org/a/6xBjsP6Pi7MxLKs8vNraHpLre.svg)](https://asciinema.org/a/6xBjsP6Pi7MxLKs8vNraHpLre)
 
@@ -272,7 +381,7 @@ tar -czf backup-$(date +%Y%m%d).tar.gz data/saves/
 <details>
 <summary><b>Check Server Health</b></summary>
 
-#### 📺 Demo: Health Check Script
+#### Demo: Health Check Script
 
 [![asciicast](https://asciinema.org/a/nvKlK8nCOKPSke52z9ZjGuUTX.svg)](https://asciinema.org/a/nvKlK8nCOKPSke52z9ZjGuUTX)
 
@@ -285,7 +394,7 @@ docker ps | grep puppy-stardew  # Should show "healthy"
 ```
 </details>
 
-### ❓ Troubleshooting
+### Troubleshooting
 
 <details>
 <summary><b>Error: "Disk write failure" when downloading game</b></summary>
@@ -375,7 +484,33 @@ docker compose up -d
 ```
 </details>
 
-### 🔧 Advanced Configuration
+<details>
+<summary><b>Host appears at Farm entrance (Should be fixed in v1.0.29!)</b></summary>
+
+**This issue is fixed in v1.0.29 with AutoHideHost v1.1.9!**
+
+If you still see this after updating:
+
+1. **Pull latest image**:
+   ```bash
+   docker compose down
+   docker pull truemanlive/puppy-stardew-server:latest
+   docker compose up -d
+   ```
+
+2. **Check mod version**: Connect via VNC and verify AutoHideHost v1.1.9 is loaded
+
+3. **Enable debug mode**:
+   ```bash
+   docker exec puppy-stardew nano /home/steam/stardewvalley/Mods/AutoHideHost/config.json
+   # Set "DebugMode": true
+   docker compose restart
+   ```
+
+4. **Report issue**: If problem persists, [open an issue](https://github.com/truman-world/puppy-stardew-server/issues) with SMAPI logs
+</details>
+
+### Advanced Configuration
 
 <details>
 <summary><b>Customize Mod Settings</b></summary>
@@ -391,6 +526,23 @@ docker exec puppy-stardew nano /home/steam/stardewvalley/Mods/AlwaysOnServer/con
 
 # Edit ServerAutoLoad config
 docker exec puppy-stardew nano /home/steam/stardewvalley/Mods/ServerAutoLoad/config.json
+```
+
+**AutoHideHost v1.1.9 Config Options:**
+```json
+{
+  "Enabled": true,
+  "AutoHideOnLoad": true,
+  "AutoHideDaily": true,
+  "InstantSleepWhenReady": true,
+  "HideMethod": "offmap",
+  "WarpX": -999999,
+  "WarpY": -999999,
+  "PreventHostFarmWarp": true,      // Guard window mechanism
+  "PeerConnectGuardSeconds": 30,    // Guard duration (seconds)
+  "RehideDelayTicks": 1,            // Re-hide delay (ticks)
+  "DebugMode": false
+}
 ```
 
 After editing, restart the server:
@@ -432,10 +584,36 @@ docker compose up -d
 This saves ~50MB RAM.
 </details>
 
-### 📝 System Requirements
+<details>
+<summary><b>Adjust CPU/Memory Limits</b></summary>
+
+Edit `docker-compose.yml`:
+
+```yaml
+deploy:
+  resources:
+    limits:
+      cpus: '1.0'      # Current: 1.0 core (adjust as needed)
+      memory: 2G       # Current: 2GB (adjust as needed)
+    reservations:
+      cpus: '0.5'
+      memory: 1G
+```
+
+**Current Configuration (v1.0.29)**:
+- CPU: 1.0 core (optimized for stability testing)
+- Memory: 2GB
+
+Restart after changes:
+```bash
+docker compose up -d
+```
+</details>
+
+### System Requirements
 
 **Server:**
-- **CPU**: 1+ cores (2+ recommended)
+- **CPU**: 1+ cores (2+ recommended for 4+ players)
 - **RAM**: 2GB minimum (4GB recommended for 4+ players)
 - **Disk**: 2GB free space
 - **OS**: Linux, Windows (Docker Desktop), macOS (Docker Desktop)
@@ -443,17 +621,18 @@ This saves ~50MB RAM.
 
 **Clients:**
 - Stardew Valley (any platform: PC, Mac, Linux, iOS, Android)
-- Same game version as server
+- Same game version as server (1.6.15)
 - LAN or internet connection to server
 
-### 📊 Performance Tips
+### Performance Tips
 
-- **Low RAM servers** (2GB): Set memory limit to 1.5G in docker-compose.yml
+- **Low RAM servers** (2GB): Current config uses 1.0 CPU core for optimal stability
 - **Multiple players**: Increase to 4GB RAM for 4+ concurrent players
 - **Reduce bandwidth**: Players on slow connections should avoid hosting events
 - **SSD recommended**: Faster load times for saves
+- **Long-term stability**: Current v1.0.29 uses 1.0 CPU core - under testing for 24/7 operation
 
-### 📜 License & Legal
+### License & Legal
 
 **License**: MIT License - free to use, modify, and distribute.
 
@@ -466,14 +645,14 @@ This saves ~50MB RAM.
   - ServerAutoLoad: MIT (custom mod for this project)
   - AutoHideHost: MIT (custom mod for this project)
 
-### 🙏 Credits
+### Credits
 
 - **Stardew Valley** by [ConcernedApe](https://www.stardewvalley.net/)
 - **SMAPI** by [Pathoschild](https://smapi.io/)
 - **Always On Server** by funny-snek & Zuberii
 - **Docker** by Docker, Inc.
 
-### 🤝 Contributing
+### Contributing
 
 Contributions are welcome! Please:
 
@@ -481,19 +660,107 @@ Contributions are welcome! Please:
 2. Create a feature branch
 3. Submit a pull request
 
-### 💬 Support & Community
+### Support & Community
 
 - **Bug Reports**: [GitHub Issues](https://github.com/truman-world/puppy-stardew-server/issues)
 - **Questions**: [GitHub Discussions](https://github.com/truman-world/puppy-stardew-server/discussions)
 - **Docker Hub**: [truemanlive/puppy-stardew-server](https://hub.docker.com/r/truemanlive/puppy-stardew-server)
 
-### ⭐ Star History
+### Star History
 
 If this project helps you, consider giving it a star! ⭐
 
 ---
 
 ## 中文
+
+### 项目架构
+
+```mermaid
+graph TB
+    subgraph "客户端层"
+        PC[PC玩家]
+        Mobile[iOS/Android玩家]
+        Console[主机玩家]
+    end
+
+    subgraph "网络层"
+        FW[防火墙<br/>端口 24642/UDP]
+        VNC[VNC访问<br/>端口 5900/TCP]
+    end
+
+    subgraph "Docker容器"
+        Entry[启动脚本]
+        Steam[SteamCMD<br/>游戏下载器]
+        SMAPI[SMAPI 4.3.2<br/>模组加载器]
+
+        subgraph "游戏模组"
+            AHH[AutoHideHost v1.1.9<br/>即时睡眠 + 隐藏房主]
+            AOS[Always On Server v1.20.3<br/>24/7自动化]
+            SAL[ServerAutoLoad v1.2.1<br/>自动加载存档]
+        end
+
+        Game[星露谷物语 1.6.15<br/>游戏服务器]
+    end
+
+    subgraph "数据持久化"
+        Saves[(存档文件)]
+        Config[(模组配置)]
+        SteamData[(Steam缓存)]
+    end
+
+    PC --> FW
+    Mobile --> FW
+    Console --> FW
+    FW --> Game
+
+    VNC -.-> Entry
+    Entry --> Steam
+    Steam --> SMAPI
+    SMAPI --> AHH
+    SMAPI --> AOS
+    SMAPI --> SAL
+    AHH --> Game
+    AOS --> Game
+    SAL --> Game
+
+    Game -.-> Saves
+    Game -.-> Config
+    Steam -.-> SteamData
+
+    style AHH fill:#90EE90
+    style Game fill:#FFD700
+    style SMAPI fill:#87CEEB
+```
+
+### 部署流程
+
+```mermaid
+graph LR
+    A[运行快速启动脚本] --> B{Docker已安装?}
+    B -->|否| C[安装Docker]
+    B -->|是| D[输入Steam凭证]
+    C --> D
+    D --> E[创建目录<br/>UID 1000:1000]
+    E --> F[生成.env文件]
+    F --> G[拉取Docker镜像]
+    G --> H[启动容器]
+    H --> I{Steam令牌?}
+    I -->|是| J[通过docker attach输入代码]
+    I -->|否| K[下载游戏文件]
+    J --> K
+    K --> L[安装SMAPI]
+    L --> M[加载预装模组]
+    M --> N{首次运行?}
+    N -->|是| O[连接VNC<br/>加载存档]
+    N -->|否| P[自动加载存档]
+    O --> Q[服务器就绪!]
+    P --> Q
+    Q --> R[玩家连接]
+
+    style Q fill:#90EE90
+    style R fill:#FFD700
+```
 
 ### 3分钟搭建星露谷物语服务器
 
@@ -506,7 +773,7 @@ If this project helps you, consider giving it a star! ⭐
 - ✅ **简单搭建** - 使用 Docker Compose 一键部署
 - ✅ **低资源占用** - 仅需 2GB 内存即可流畅运行
 
-### ✨ 核心功能
+### 核心功能
 
 - **一键部署**  - 一条命令 3 分钟完成部署
 - **全平台支持** 📱 - PC、Mac、Linux、iOS、Android 全支持
@@ -517,6 +784,7 @@ If this project helps you, consider giving it a star! ⭐
 - **VNC 远程访问** 🖥️ - 内置 VNC，首次设置超简单
 - **即时睡眠** 🛏️ - 附加功能：玩家随时可以睡觉，无需等待
 - **隐藏房主** 👻 - 房主玩家自动隐藏，零干扰
+- **守护窗口保护** 🛡️ - 新功能：防止房主出现在Farm门口
 
 <div align="center">
 
@@ -525,6 +793,20 @@ If this project helps you, consider giving it a star! ⭐
 *附加功能：即时睡眠 - 点击床 → 立即睡眠 → 新的一天开始！*
 
 </div>
+
+### 最新版本更新
+
+#### v1.0.29 (2025年11月)
+
+**AutoHideHost v1.1.9 - 重大修复：**
+- ✅ **已修复：** 房主不再在玩家连接时出现在Farm门口
+- ✅ **新增：** 守护窗口机制每天自动激活
+- ✅ **改进：** 多日持久化 - 无限期跨日循环工作
+- ✅ **增强：** 传送检测的诊断日志记录
+
+**基础设施：**
+- ✅ **优化：** CPU限制调整为1.0核心，进行稳定性测试
+- ✅ **改进：** 长期24/7运行的资源效率
 
 ### 快速开始（2 种方式）
 
@@ -649,7 +931,7 @@ docker attach puppy-stardew
 
 </details>
 
-### 🎮 初始设置（仅首次运行）
+### 初始设置（仅首次运行）
 
 服务器启动后，您需要**一次性**创建或加载存档：
 
@@ -673,24 +955,30 @@ docker attach puppy-stardew
    - 您的服务器应该出现在列表中
    - 或手动输入：`服务器IP:24642`
 
-### 📦 包含内容
+### 包含内容
 
 #### 预装模组
 
-| 模组 | 版本 | 用途 |
-|-----|------|------|
-| **AutoHideHost** | v1.0.0 | 自定义模组 - 隐藏房主玩家并启用即时睡眠 |
-| **Always On Server** | v1.20.3 | 保持服务器 24/7 运行，不需要房主在线 |
-| **ServerAutoLoad** | v1.2.1 | 自定义模组 - 启动时自动加载存档 |
+| 模组 | 版本 | 用途 | 新功能 |
+|-----|------|------|--------|
+| **AutoHideHost** | v1.1.9 | 自定义模组 - 隐藏房主玩家并启用即时睡眠 | ✨ **守护窗口**防止Farm传送 |
+| **Always On Server** | v1.20.3 | 保持服务器 24/7 运行，不需要房主在线 | - |
+| **ServerAutoLoad** | v1.2.1 | 自定义模组 - 启动时自动加载存档 | - |
+
+**AutoHideHost v1.1.9 亮点：**
+- 🎯 **已修复**：房主不再在早上6:40传送到Farm门口
+- 🛡️ **新增**：守护窗口机制，每天自动刷新
+- ⚡ **即时**：重新隐藏延迟 < 1游戏帧
+- 🔄 **持久**：跨多个连续日期工作
 
 所有模组都已预配置，开箱即用！
 
-### 🛠️ 常用操作
+### 常用操作
 
 <details>
 <summary><b>查看服务器日志</b></summary>
 
-#### 📺 演示：查看服务器日志
+#### 演示：查看服务器日志
 
 [![asciicast](https://asciinema.org/a/ny9f5DL7FPXhAfApmu2HGhkI8.svg)](https://asciinema.org/a/ny9f5DL7FPXhAfApmu2HGhkI8)
 
@@ -732,7 +1020,7 @@ docker compose up -d
 <details>
 <summary><b>备份存档</b></summary>
 
-#### 📺 演示：创建备份
+#### 演示：创建备份
 
 [![asciicast](https://asciinema.org/a/6xBjsP6Pi7MxLKs8vNraHpLre.svg)](https://asciinema.org/a/6xBjsP6Pi7MxLKs8vNraHpLre)
 
@@ -748,7 +1036,7 @@ tar -czf backup-$(date +%Y%m%d).tar.gz data/saves/
 <details>
 <summary><b>检查服务器健康状态</b></summary>
 
-#### 📺 演示：健康检查脚本
+#### 演示：健康检查脚本
 
 [![asciicast](https://asciinema.org/a/nvKlK8nCOKPSke52z9ZjGuUTX.svg)](https://asciinema.org/a/nvKlK8nCOKPSke52z9ZjGuUTX)
 
@@ -761,7 +1049,7 @@ docker ps | grep puppy-stardew  # 应该显示 "healthy"
 ```
 </details>
 
-### ❓ 故障排除
+### 故障排除
 
 <details>
 <summary><b>错误："Disk write failure" 下载游戏时</b></summary>
@@ -851,7 +1139,33 @@ docker compose up -d
 ```
 </details>
 
-### 🔧 高级配置
+<details>
+<summary><b>房主出现在Farm门口（v1.0.29已修复！）</b></summary>
+
+**此问题在v1.0.29中已通过AutoHideHost v1.1.9修复！**
+
+如果更新后仍然出现此问题：
+
+1. **拉取最新镜像**：
+   ```bash
+   docker compose down
+   docker pull truemanlive/puppy-stardew-server:latest
+   docker compose up -d
+   ```
+
+2. **检查模组版本**：通过VNC连接并验证已加载AutoHideHost v1.1.9
+
+3. **启用调试模式**：
+   ```bash
+   docker exec puppy-stardew nano /home/steam/stardewvalley/Mods/AutoHideHost/config.json
+   # 设置 "DebugMode": true
+   docker compose restart
+   ```
+
+4. **报告问题**：如果问题仍然存在，[提交issue](https://github.com/truman-world/puppy-stardew-server/issues) 并附上SMAPI日志
+</details>
+
+### 高级配置
 
 <details>
 <summary><b>自定义模组设置</b></summary>
@@ -867,6 +1181,23 @@ docker exec puppy-stardew nano /home/steam/stardewvalley/Mods/AlwaysOnServer/con
 
 # 编辑 ServerAutoLoad 配置
 docker exec puppy-stardew nano /home/steam/stardewvalley/Mods/ServerAutoLoad/config.json
+```
+
+**AutoHideHost v1.1.9 配置选项：**
+```json
+{
+  "Enabled": true,
+  "AutoHideOnLoad": true,
+  "AutoHideDaily": true,
+  "InstantSleepWhenReady": true,
+  "HideMethod": "offmap",
+  "WarpX": -999999,
+  "WarpY": -999999,
+  "PreventHostFarmWarp": true,      // 守护窗口机制
+  "PeerConnectGuardSeconds": 30,    // 守护持续时间（秒）
+  "RehideDelayTicks": 1,            // 重新隐藏延迟（帧数）
+  "DebugMode": false
+}
 ```
 
 编辑后重启服务器：
@@ -908,10 +1239,36 @@ docker compose up -d
 这可以节省约 50MB 内存。
 </details>
 
-### 📝 系统要求
+<details>
+<summary><b>调整CPU/内存限制</b></summary>
+
+编辑 `docker-compose.yml`：
+
+```yaml
+deploy:
+  resources:
+    limits:
+      cpus: '1.0'      # 当前：1.0核心（根据需要调整）
+      memory: 2G       # 当前：2GB（根据需要调整）
+    reservations:
+      cpus: '0.5'
+      memory: 1G
+```
+
+**当前配置（v1.0.29）**：
+- CPU：1.0核心（为稳定性测试优化）
+- 内存：2GB
+
+更改后重启：
+```bash
+docker compose up -d
+```
+</details>
+
+### 系统要求
 
 **服务器：**
-- **CPU**：1+ 核心（推荐 2+）
+- **CPU**：1+ 核心（4+ 玩家推荐 2+）
 - **内存**：最低 2GB（4+ 玩家推荐 4GB）
 - **磁盘**：2GB 可用空间
 - **操作系统**：Linux、Windows（Docker Desktop）、macOS（Docker Desktop）
@@ -919,17 +1276,18 @@ docker compose up -d
 
 **客户端：**
 - 星露谷物语（任何平台：PC、Mac、Linux、iOS、Android）
-- 与服务器相同的游戏版本
+- 与服务器相同的游戏版本（1.6.15）
 - 局域网或互联网连接到服务器
 
-### 📊 性能优化建议
+### 性能优化建议
 
-- **低内存服务器**（2GB）：在 docker-compose.yml 中设置内存限制为 1.5G
+- **低内存服务器**（2GB）：当前配置使用1.0 CPU核心以获得最佳稳定性
 - **多玩家**：4+ 同时在线玩家，增加到 4GB 内存
 - **减少带宽**：网速慢的玩家避免主办活动
 - **推荐 SSD**：存档加载更快
+- **长期稳定性**：当前v1.0.29使用1.0 CPU核心 - 正在进行24/7运行测试
 
-### 📜 许可证与法律
+### 许可证与法律
 
 **许可证**：MIT 许可证 - 免费使用、修改和分发。
 
@@ -942,14 +1300,14 @@ docker compose up -d
   - ServerAutoLoad：MIT（本项目自定义模组）
   - AutoHideHost：MIT（本项目自定义模组）
 
-### 🙏 致谢
+### 致谢
 
 - **星露谷物语** by [ConcernedApe](https://www.stardewvalley.net/)
 - **SMAPI** by [Pathoschild](https://smapi.io/)
 - **Always On Server** by funny-snek & Zuberii
 - **Docker** by Docker, Inc.
 
-### 🤝 贡献
+### 贡献
 
 欢迎贡献！请：
 
@@ -957,13 +1315,13 @@ docker compose up -d
 2. 创建功能分支
 3. 提交 Pull Request
 
-### 💬 支持与社区
+### 支持与社区
 
 - **错误报告**：[GitHub Issues](https://github.com/truman-world/puppy-stardew-server/issues)
 - **问题讨论**：[GitHub Discussions](https://github.com/truman-world/puppy-stardew-server/discussions)
 - **Docker Hub**：[truemanlive/puppy-stardew-server](https://hub.docker.com/r/truemanlive/puppy-stardew-server)
 
-### ⭐ Star 历史
+### Star 历史
 
 如果这个项目帮助了您，请考虑给个 Star！⭐
 
