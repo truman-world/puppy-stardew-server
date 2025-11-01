@@ -12,5 +12,11 @@ namespace AutoHideHost
         public int WarpX { get; set; } = 0;
         public int WarpY { get; set; } = 0;
         public bool DebugMode { get; set; } = true;
+
+        // v1.1.8: 守护窗口机制 - 防止玩家连接后房主被传送到Farm
+        public bool PreventHostFarmWarp { get; set; } = true;  // 启用防传送机制
+        public int PeerConnectGuardSeconds { get; set; } = 30;  // 守护窗口时长（秒）
+        public int RehideDelayTicks { get; set; } = 1;  // 重新隐藏延迟（游戏帧数）
+        public bool DebugTraceMenus { get; set; } = false;  // 启用菜单堆栈追踪
     }
 }

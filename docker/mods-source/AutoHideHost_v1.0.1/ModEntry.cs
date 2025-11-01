@@ -24,6 +24,12 @@ namespace AutoHideHost
         private int alwaysOnServerCheckTicks = 0;
         private bool needToCheckAlwaysOnServer = false;
 
+        // v1.1.8: 守护窗口机制 - 防止玩家连接后房主被传送到Farm
+        private DateTime? guardWindowEnd = null;  // 守护窗口结束时间
+        private DateTime? lastRehideTime = null;  // 上次重新隐藏时间（防抖）
+        private bool needRehide = false;  // 是否需要重新隐藏
+        private int rehideTicks = 0;  // 重新隐藏倒计时
+
         public override void Entry(IModHelper helper)
         {
             this.Config = helper.ReadConfig<ModConfig>();
@@ -35,6 +41,11 @@ namespace AutoHideHost
             helper.Events.GameLoop.UpdateTicked += OnUpdateTicked;
             helper.Events.GameLoop.Saving += OnSaving;
             helper.Events.Display.MenuChanged += OnMenuChanged;  // v1.4.0: 处理菜单变化
+
+            // v1.1.8: 守护窗口机制
+            helper.Events.Multiplayer.PeerConnected += OnPeerConnected;  // 玩家连接时启动守护窗口
+            helper.Events.Player.Warped += OnWarped;  // 监控房主传送
+
             RegisterCommands();
         }
 
@@ -64,6 +75,14 @@ namespace AutoHideHost
             hasTriggeredSleep = false;
             isSleepInProgress = false;
             handledReadyCheck = false;  // v1.4.0: 重置ReadyCheck标志
+
+            // v1.1.9: 每天开始时启动守护窗口（防止玩家一直在线导致窗口过期）
+            if (Config.PreventHostFarmWarp)
+            {
+                guardWindowEnd = DateTime.Now.AddSeconds(Config.PeerConnectGuardSeconds);
+                this.Monitor.Log($"[守护窗口] 新的一天开始，启动{Config.PeerConnectGuardSeconds}秒守护窗口", LogLevel.Info);
+                LogDebug($"[守护窗口] 窗口结束时间: {guardWindowEnd:HH:mm:ss}");
+            }
 
             LogDebug("新的一天，房主重新隐藏");
         }
@@ -146,6 +165,9 @@ namespace AutoHideHost
 
                     string dialogueText = dialogue?.getCurrentDialogue() ?? "";
 
+                    // 记录所有 DialogueBox 内容以便调试
+                    this.Monitor.Log($"DialogueBox 内容: {dialogueText.Substring(0, Math.Min(100, dialogueText.Length))}", LogLevel.Debug);
+
                     // 检测是否是任务通知（包含特定关键词）
                     if (dialogueText.Contains("Accept Quest") ||
                         dialogueText.Contains("accept") ||
@@ -155,7 +177,6 @@ namespace AutoHideHost
                         dialogueText.Contains("MISSING"))
                     {
                         this.Monitor.Log($"检测到任务通知对话框，自动拒绝", LogLevel.Info);
-                        this.Monitor.Log($"对话内容: {dialogueText.Substring(0, Math.Min(50, dialogueText.Length))}...", LogLevel.Debug);
 
                         // 按ESC键关闭对话框（拒绝任务）
                         dialogueBox.receiveKeyPress(Microsoft.Xna.Framework.Input.Keys.Escape);
@@ -164,6 +185,11 @@ namespace AutoHideHost
                         this.Monitor.Log("✓ 任务通知已自动关闭（拒绝）", LogLevel.Info);
                         return;
                     }
+
+                    // 如果不是任务通知，也自动关闭（避免阻塞游戏流程）
+                    this.Monitor.Log("检测到非任务通知的DialogueBox，自动关闭", LogLevel.Info);
+                    dialogueBox.receiveKeyPress(Microsoft.Xna.Framework.Input.Keys.Escape);
+                    Game1.activeClickableMenu = null;
                 }
                 catch (Exception ex)
                 {
@@ -250,6 +276,20 @@ namespace AutoHideHost
             if (!Config.Enabled || !Context.IsMainPlayer)
                 return;
 
+            // v1.1.8: 处理延迟重新隐藏
+            if (needRehide && rehideTicks > 0)
+            {
+                rehideTicks--;
+                if (rehideTicks == 0)
+                {
+                    this.Monitor.Log($"[守护窗口] 执行重新隐藏", LogLevel.Info);
+                    HideHost();
+                    lastRehideTime = DateTime.Now;
+                    needRehide = false;
+                    this.Monitor.Log($"[守护窗口] ✓ 房主已重新隐藏", LogLevel.Info);
+                }
+            }
+
             // v1.4.1: 检查并自动启用 Always On Server
             if (needToCheckAlwaysOnServer && !alwaysOnServerChecked)
             {
@@ -267,14 +307,7 @@ namespace AutoHideHost
             // v1.4.0: 全局菜单和Ready状态处理
             if (e.Ticks % 30 == 0)  // 每0.5秒执行一次
             {
-                // 1. 处理DialogueBox
-                if (Game1.activeClickableMenu != null && Game1.activeClickableMenu is StardewValley.Menus.DialogueBox)
-                {
-                    this.Monitor.Log("检测到DialogueBox，自动点击关闭", LogLevel.Info);
-                    Game1.activeClickableMenu.receiveLeftClick(10, 10);
-                }
-
-                // 2. v1.4.0: 使用Team Ready API - 更可靠的方案
+                // v1.4.0: 使用Team Ready API - 更可靠的方案
                 try
                 {
                     // 检查是否有活跃的"sleep"准备检查
@@ -1054,6 +1087,74 @@ namespace AutoHideHost
             this.Monitor.Log("Game will auto-pause when no players are online", LogLevel.Info);
             this.Monitor.Log("==========================================", LogLevel.Info);
             this.Monitor.Log("", LogLevel.Info);
+        }
+
+        /// <summary>
+        /// v1.1.8: 玩家连接时启动守护窗口
+        /// </summary>
+        private void OnPeerConnected(object sender, PeerConnectedEventArgs e)
+        {
+            if (!Context.IsMainPlayer || !Config.Enabled || !Config.PreventHostFarmWarp)
+                return;
+
+            // 启动/刷新守护窗口
+            guardWindowEnd = DateTime.Now.AddSeconds(Config.PeerConnectGuardSeconds);
+            this.Monitor.Log($"[守护窗口] 玩家 {e.Peer.PlayerID} 连接，启动{Config.PeerConnectGuardSeconds}秒守护窗口", LogLevel.Info);
+            LogDebug($"[守护窗口] 窗口结束时间: {guardWindowEnd:HH:mm:ss}");
+        }
+
+        /// <summary>
+        /// v1.1.8: 监控房主传送，检测并阻止意外传送到Farm/FarmHouse
+        /// </summary>
+        private void OnWarped(object sender, WarpedEventArgs e)
+        {
+            if (!Context.IsMainPlayer || !Config.Enabled || !Config.PreventHostFarmWarp)
+                return;
+
+            // 记录所有传送（调试用）
+            LogDebug($"[传送监控] {e.OldLocation?.Name ?? "null"} → {e.NewLocation?.Name ?? "null"}");
+
+            // 检查是否在守护窗口内
+            bool inGuardWindow = guardWindowEnd.HasValue && DateTime.Now < guardWindowEnd.Value;
+
+            // 检查是否在睡眠/保存流程中（移除saveOnNewDay检查，因为它在传送时已经是true）
+            bool inSleepSaveFlow = isSleepInProgress || hasTriggeredSleep;
+
+            // 检查是否是意外传送到Farm或FarmHouse（不依赖isHostHidden标志）
+            bool isUnexpectedWarp = (e.NewLocation?.Name == "Farm" || e.NewLocation?.Name == "FarmHouse")
+                && !inSleepSaveFlow;
+
+            // 详细诊断日志
+            if (e.NewLocation?.Name == "Farm" || e.NewLocation?.Name == "FarmHouse")
+            {
+                this.Monitor.Log($"[守护窗口-诊断] 传送到{e.NewLocation?.Name}", LogLevel.Debug);
+                this.Monitor.Log($"[守护窗口-诊断] inGuardWindow={inGuardWindow}, guardWindowEnd={guardWindowEnd?.ToString("HH:mm:ss")}", LogLevel.Debug);
+                this.Monitor.Log($"[守护窗口-诊断] inSleepSaveFlow={inSleepSaveFlow} (isSleepInProgress={isSleepInProgress}, saveOnNewDay={Game1.saveOnNewDay}, hasTriggeredSleep={hasTriggeredSleep})", LogLevel.Debug);
+                this.Monitor.Log($"[守护窗口-诊断] isUnexpectedWarp={isUnexpectedWarp}", LogLevel.Debug);
+            }
+
+            if (inGuardWindow && isUnexpectedWarp)
+            {
+                this.Monitor.Log($"[守护窗口] ⚠️ 检测到意外传送到{e.NewLocation?.Name}！准备重新隐藏", LogLevel.Warn);
+                this.Monitor.Log($"[守护窗口] 原位置: {e.OldLocation?.Name}, 当前位置: {e.NewLocation?.Name}", LogLevel.Warn);
+
+                // 检查防抖：避免在短时间内重复隐藏
+                if (lastRehideTime.HasValue && (DateTime.Now - lastRehideTime.Value).TotalSeconds < 2)
+                {
+                    this.Monitor.Log($"[守护窗口] 防抖：距离上次隐藏不足2秒，跳过", LogLevel.Debug);
+                    return;
+                }
+
+                // 调度重新隐藏（延迟指定帧数）
+                needRehide = true;
+                rehideTicks = Config.RehideDelayTicks;
+                this.Monitor.Log($"[守护窗口] 已调度重新隐藏（延迟{rehideTicks}帧）", LogLevel.Info);
+            }
+            else if (isUnexpectedWarp && !inGuardWindow)
+            {
+                // 不在守护窗口内，但仍然检测到意外传送（记录警告）
+                this.Monitor.Log($"[传送监控] ⚠️ 检测到{e.NewLocation?.Name}传送（守护窗口外）: {e.OldLocation?.Name} → {e.NewLocation?.Name}", LogLevel.Warn);
+            }
         }
 
         private void LogDebug(string message)
